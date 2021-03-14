@@ -25,6 +25,12 @@ public:
 		}
 	}
 
+	template<class ...Args>
+	static void init(Args&& ...args) {
+		T* o = new T(std::forward<Args>(args)...);
+		Locator<T>::provide(o);
+	}
+
 private:
 	static T* object;
 };
