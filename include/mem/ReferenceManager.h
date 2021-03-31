@@ -14,8 +14,11 @@
 #include <typeinfo>
 #endif
 
+#define DEFAULTCOPY(T) T(const T&) = default; T& operator=(const T&) = default;
 #define NOCOPY(T) T(const T&) = delete; T& operator=(const T&) = delete;
+#define DEFAULTMOVE(T) T(T&&) = default; T& operator=(T&&) = default;
 #define NOMOVE(T) T(T&&) = delete; T& operator=(T&&) = delete;
+#define DEFAULTCOPYMOVE(T) DEFAULTCOPY(T) DEFAULTMOVE(T)
 #define NOCOPYMOVE(T) NOCOPY(T) NOMOVE(T)
 
 typedef int32_t Handle;
