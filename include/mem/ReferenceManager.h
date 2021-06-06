@@ -155,7 +155,7 @@ public:
 	std::set<Handle> freeHandles;
 	bool freeHandlesSorted = true;
 
-	std::vector<bool> usedHandle;
+	std::vector<int32_t> usedHandle;
 
 	template<class T>
 	T* getPtr(Handle h);
