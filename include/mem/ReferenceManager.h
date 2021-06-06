@@ -324,7 +324,8 @@ template<class B>
 template<class T, class ...Args>
 inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&& ...args) {
 	Handle h = this->getFreeHandle();
-	this->data[h] = std::make_unique<T>(h, std::forward<Args>(args)...);
+	this->data[h] = std::make_unique<T>(std::forward<Args>(args)...);
+	this->data[h]->selfHandle = h;
 	this->usedHandle[h] = true;
 	auto ptr = this->data[h].get();
 	return WeakReference<B, T>(*this, ptr);
@@ -334,7 +335,8 @@ template<class B>
 template<class T, class ...Args>
 inline UniqueReference<B, T> ReferenceManager<B>::makeUniqueRef(Args&& ...args) {
 	Handle h = this->getFreeHandle();
-	this->data[h] = std::make_unique<T>(h, std::forward<Args>(args)...);
+	this->data[h] = std::make_unique<T>(std::forward<Args>(args)...);
+	this->data[h]->selfHandle = h;
 	this->usedHandle[h] = true;
 	auto ptr = this->data[h].get();
 	return UniqueReference<B, T>(*this, ptr);
