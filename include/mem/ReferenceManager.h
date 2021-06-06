@@ -21,15 +21,10 @@
 #define DEFAULTCOPYMOVE(T) DEFAULTCOPY(T) DEFAULTMOVE(T)
 #define NOCOPYMOVE(T) NOCOPY(T) NOMOVE(T)
 
-typedef int32_t Handle;
+using Handle = int32_t;
 
 template <class B>
 class ReferenceManager;
-
-template<class B>
-struct HasSelfReference : std::false_type
-{
-};
 
 class Reference
 {
@@ -246,7 +241,7 @@ inline WeakReference<B, T>::WeakReference(ReferenceManager<B>& manager_, Handle 
 
 template<class B, class T>
 inline bool ManagedReference<B, T>::isValid() const {
-	return this->WeakReference<B, T>::isNotNull();
+	return this->isNotNull();
 }
 
 template<class B, class T>
@@ -332,9 +327,6 @@ inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&& ...args) {
 	this->data[h] = std::make_unique<T>(h, std::forward<Args>(args)...);
 	this->usedHandle[h] = true;
 	auto ptr = this->data[h].get();
-	if constexpr (HasSelfReference<B>::value) {
-		ptr->selfReference = WeakReference<B, T>(*this, ptr);
-	}
 	return WeakReference<B, T>(*this, ptr);
 }
 
@@ -345,9 +337,6 @@ inline UniqueReference<B, T> ReferenceManager<B>::makeUniqueRef(Args&& ...args) 
 	this->data[h] = std::make_unique<T>(h, std::forward<Args>(args)...);
 	this->usedHandle[h] = true;
 	auto ptr = this->data[h].get();
-	if constexpr (HasSelfReference<B>::value) {
-		ptr->selfReference = WeakReference<B, T>(*this, ptr);
-	}
 	return UniqueReference<B, T>(*this, ptr);
 }
 
@@ -439,9 +428,9 @@ inline void ReferenceManager<B>::deleteReference(Handle h) {
 	}
 	auto range = this->managedReferences.equal_range(h);
 	for_each(range.first, range.second, [](ManagedReferencesType::value_type& ref) -> void
-	{
-		ref.second->clearPtr();
-	});
+		{
+			ref.second->clearPtr();
+		});
 
 	this->managedReferences.erase(range.first, range.second);
 
