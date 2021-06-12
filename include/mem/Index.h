@@ -44,7 +44,7 @@ struct Index
 template<class T>
 struct serial::Serializable<Index<T>>
 {
-	static constexpr std::string_view typaName = "Index";
+	static constexpr std::string_view typeName = "Index";
 
 	ALL_DEF(Index<T>) {
 		return serializer.runAll<Selector>(
