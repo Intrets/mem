@@ -37,4 +37,4 @@ private:
 	static T* object;
 };
 
-template<class T> T* Locator<T>::object;
+template<class T> T* Locator<T>::object = nullptr;

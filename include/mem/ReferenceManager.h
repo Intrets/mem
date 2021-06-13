@@ -14,12 +14,12 @@
 #include <typeinfo>
 #endif
 
-#define DEFAULTCOPY(T) T(const T&) = default; T& operator=(const T&) = default;
-#define NOCOPY(T) T(const T&) = delete; T& operator=(const T&) = delete;
-#define DEFAULTMOVE(T) T(T&&) = default; T& operator=(T&&) = default;
-#define NOMOVE(T) T(T&&) = delete; T& operator=(T&&) = delete;
-#define DEFAULTCOPYMOVE(T) DEFAULTCOPY(T) DEFAULTMOVE(T)
-#define NOCOPYMOVE(T) NOCOPY(T) NOMOVE(T)
+#define DEFAULT_COPY(T) T(const T&) = default; T& operator=(const T&) = default;
+#define NO_COPY(T) T(const T&) = delete; T& operator=(const T&) = delete;
+#define DEFAULT_MOVE(T) T(T&&) = default; T& operator=(T&&) = default;
+#define NO_MOVE(T) T(T&&) = delete; T& operator=(T&&) = delete;
+#define DEFAULT_COPY_MOVE(T) DEFAULT_COPY(T) DEFAULT_MOVE(T)
+#define NO_COPY_MOVE(T) NO_COPY(T) NO_MOVE(T)
 
 using Handle = int32_t;
 
@@ -95,7 +95,7 @@ public:
 	template<class N>
 	UniqueReference<B, T>& operator= (UniqueReference<B, N>&& other);
 
-	NOCOPY(UniqueReference);
+	NO_COPY(UniqueReference);
 };
 
 template <class B, class T>
@@ -186,7 +186,7 @@ public:
 	};
 	~ReferenceManager();
 
-	NOCOPYMOVE(ReferenceManager);
+	NO_COPY_MOVE(ReferenceManager);
 };
 
 template<class B, class T>
