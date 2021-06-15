@@ -36,6 +36,10 @@ struct Index
 		return pre;
 	}
 
+	bool operator==(Index<T> const& other) {
+		return this->i == other.i;
+	}
+
 	void set(index_type j) {
 		this->i = j;
 	}
