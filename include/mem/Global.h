@@ -6,17 +6,8 @@ template<class T>
 class Global
 {
 public:
-	static T* get() {
-		return object;
-	};
-	static T& ref() {
-		return *object;
-	};
-
 	static void provide(T* obj) {
-		if (object != nullptr) {
-			delete object;
-		}
+		destroy();
 		object = obj;
 	}
 
@@ -27,14 +18,19 @@ public:
 		}
 	}
 
+	T* operator->() {
+		return object;
+	}
+
+	T& operator*() {
+		return *object;
+	}
+
 	template<class ...Args>
 	static void init(Args&& ...args) {
-		T* o = new T(std::forward<Args>(args)...);
-		Global<T>::provide(o);
+		Global<T>::provide(new T(std::forward<Args>(args)...));
 	}
 
 private:
-	static T* object;
+	static inline T* object = nullptr;
 };
-
-template<class T> T* Global<T>::object = nullptr;
