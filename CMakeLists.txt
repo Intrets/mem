@@ -4,7 +4,7 @@ set(MODULE_NAME mem)
 
 set(MODULE_FILES
 	ReferenceManager
-	Locator
+	Global
 	Index
 )
 

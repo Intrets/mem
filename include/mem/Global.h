@@ -3,7 +3,7 @@
 #include <utility>
 
 template<class T>
-class Locator
+class Global
 {
 public:
 	static T* get() {
@@ -30,11 +30,11 @@ public:
 	template<class ...Args>
 	static void init(Args&& ...args) {
 		T* o = new T(std::forward<Args>(args)...);
-		Locator<T>::provide(o);
+		Global<T>::provide(o);
 	}
 
 private:
 	static T* object;
 };
 
-template<class T> T* Locator<T>::object = nullptr;
+template<class T> T* Global<T>::object = nullptr;
