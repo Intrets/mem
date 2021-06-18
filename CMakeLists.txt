@@ -6,6 +6,7 @@ set(MODULE_FILES
 	ReferenceManager
 	Global
 	Index
+	LazyGlobal
 )
 
 make_module(${MODULE_NAME} "${MODULE_FILES}")
