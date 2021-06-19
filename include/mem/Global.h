@@ -21,10 +21,12 @@ namespace impl
 		}
 
 		T* operator->() const {
+			assert(object != nullptr);
 			return object;
 		}
 
 		T& operator*() const {
+			assert(object != nullptr);
 			return *object;
 		}
 
