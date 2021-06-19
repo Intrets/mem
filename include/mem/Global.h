@@ -2,35 +2,41 @@
 
 #include <utility>
 
-template<class T>
-class Global
+namespace impl
 {
-public:
-	static void provide(T* obj) {
-		destroy();
-		object = obj;
-	}
-
-	static void destroy() {
-		if (object != nullptr) {
-			delete object;
-			object = nullptr;
+	template<class T>
+	class Global
+	{
+	public:
+		void provide(T* obj) const {
+			destroy();
+			object = obj;
 		}
-	}
 
-	T* operator->() {
-		return object;
-	}
+		void destroy() const {
+			if (object != nullptr) {
+				delete object;
+				object = nullptr;
+			}
+		}
 
-	T& operator*() {
-		return *object;
-	}
+		T* operator->() const {
+			return object;
+		}
 
-	template<class ...Args>
-	static void init(Args&& ...args) {
-		Global<T>::provide(new T(std::forward<Args>(args)...));
-	}
+		T& operator*() const {
+			return *object;
+		}
 
-private:
-	static inline T* object = nullptr;
-};
+		template<class ...Args>
+		void init(Args&& ...args) const {
+			provide(new T(std::forward<Args>(args)...));
+		}
+
+	private:
+		static inline T* object = nullptr;
+	};
+}
+
+template<class T>
+constexpr auto Global = impl::Global<T>{};
