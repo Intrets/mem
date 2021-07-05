@@ -1,16 +1,19 @@
-include("${PROJECT_SOURCE_DIR}/cmake/MakeModule.cmake")
+cmake_minimum_required(VERSION 3.20)
+
+include("./cmake/MakeModule.cmake")
 
 set(MODULE_NAME mem)
 
-set(MODULE_FILES
-	ReferenceManager
-	Global
-	Index
-	LazyGlobal
-)
+project(${MODULE_NAME})
 
-make_module(${MODULE_NAME} "${MODULE_FILES}")
-
-target_link_libraries(${MODULE_NAME} PUBLIC
-	serial
+make_module(
+	MODULE_NAME ${MODULE_NAME}
+	MODULE_FILES
+		ReferenceManager
+		Global
+		Index
+		LazyGlobal
+	CXX_STANDARD 20
+	OPTIONAL_LIBS
+		serial
 )

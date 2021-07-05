@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <concepts>
 
+#ifdef LIB_SERIAL
 #include <serial/Serializer.h>
+#endif
 
 template<class T, std::integral index_type = size_t>
 struct Index
@@ -45,6 +47,7 @@ struct Index
 	}
 };
 
+#ifdef LIB_SERIAL
 template<class T>
 struct serial::Serializable<Index<T>>
 {
@@ -56,3 +59,4 @@ struct serial::Serializable<Index<T>>
 			);
 	}
 };
+#endif
