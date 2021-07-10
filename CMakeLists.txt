@@ -13,7 +13,11 @@ make_module(
 		Global
 		Index
 		LazyGlobal
+		Everything
 	CXX_STANDARD 20
+	REQUIRED_LIBS
+		misc
+		tepp
 	OPTIONAL_LIBS
 		serial
 )
