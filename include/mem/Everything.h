@@ -438,7 +438,7 @@ namespace mem
 				for (Index<RawData> i{ 1 }; i < end; i++) {
 					auto index = g.getIndex(i);
 
-					if (e.has<Ms...>(index)) {
+					if (e.has<M, Ms...>(index)) {
 						Loop::run<Everything, F, L, Match<M, Ms...>, Args...>(e, f, Match<M, Ms...>{ { index, & e } }, args...);
 					}
 				}
@@ -469,7 +469,7 @@ namespace mem
 				for (Index<RawData> i{ 1 }; i < end; i++) {
 					auto index = g.getIndex(i);
 
-					if (e.has<Ms...>(index)) {
+					if (e.has<M, Ms...>(index)) {
 						f(WeakObject{ index, &e }, e.template get<M>(index), e.get<Ms>(index)...);
 					}
 				}
@@ -496,7 +496,7 @@ namespace mem
 				for (Index<RawData> i{ 1 }; i < end; i++) {
 					auto index = g.getIndex(i);
 
-					if (e.has<Ms...>(index)) {
+					if (e.has<M, Ms...>(index)) {
 						f(e.template get<M>(index), e.get<Ms>(index)...);
 					}
 				}
