@@ -41,5 +41,10 @@ namespace impl
 	};
 }
 
-template<class T>
-constexpr auto Global = impl::Global<T>{};
+namespace mem
+{
+	template<class T>
+	constexpr auto Global = impl::Global<T>{};
+}
+
+using mem::Global;
