@@ -2,6 +2,8 @@
 
 #include <mutex>
 
+#include <misc/Misc.h>
+
 namespace mem
 {
 	template<class>
@@ -26,6 +28,9 @@ namespace mem
 		template<class... Args>
 		MutexedObject(Args&&... args) : object(std::forward<Args>(args)...) {};
 		~MutexedObject() = default;
+
+		NO_COPY(MutexedObject);
+		DEFAULT_MOVE(MutexedObject);
 	};
 
 	template<class T>
