@@ -10,11 +10,15 @@ namespace mem
 	template<class T>
 	struct MutexedObject
 	{
+	private:
+		friend class ScopedAccess<MutexedObject<T>>;
+
 		using ValueType = T;
 
 		T object;
 		std::mutex mutex;
 
+	public:
 		auto acquire() {
 			return ScopedAccess(*this);
 		}
