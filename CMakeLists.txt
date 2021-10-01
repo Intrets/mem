@@ -14,6 +14,7 @@ make_module(
 		Index
 		LazyGlobal
 		Everything
+		MutexedObject
 	CXX_STANDARD 20
 	REQUIRED_LIBS
 		misc
