@@ -42,6 +42,10 @@ namespace mem
 			return &this->object.object;
 		}
 
+		T::ValueType& operator*() {
+			return this->object.object;
+		}
+
 		ScopedAccess(T& object_) : object(object_) {
 			this->object.mutex.lock();
 		}
