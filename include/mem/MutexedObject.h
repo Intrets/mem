@@ -13,7 +13,7 @@ namespace mem
 	struct MutexedObject
 	{
 	private:
-		friend class ScopedAccess<MutexedObject<T>>;
+		friend struct ScopedAccess<MutexedObject<T>>;
 
 		using ValueType = T;
 
