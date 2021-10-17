@@ -5,9 +5,13 @@ namespace impl
 	template<class T>
 	struct LazyGlobal
 	{
-		T* operator->() const {
+		T* operator*() const {
 			static T global{};
 			return &global;
+		}
+
+		T* operator->() const {
+			return LazyGlobal<T>::operator*();
 		}
 	};
 }
