@@ -411,13 +411,13 @@ namespace mem
 
 		template<class T>
 		inline T& get() {
-			static_assert(te::contains_v<te::list<M, Ms...>, T>);
+			static_assert(te::contains_v<te::list_type<M, Ms...>, T>);
 			return this->obj.template get<T>();
 		};
 
 		template<class T>
 		inline void remove() {
-			static_assert(te::contains_v<te::list<M, Ms...>, T>);
+			static_assert(te::contains_v<te::list_type<M, Ms...>, T>);
 			this->obj.template remove<T>();
 		};
 
@@ -450,7 +450,7 @@ namespace mem
 	struct MatchExpanded;
 
 	template<class M, class... Ms>
-	struct MatchExpanded<te::list<WeakObject, M, Ms...>>
+	struct MatchExpanded<te::list_type<WeakObject, M, Ms...>>
 	{
 		template<class F>
 		static inline void run(Everything& e, F f) {
@@ -478,7 +478,7 @@ namespace mem
 	};
 
 	template<class M, class... Ms>
-	struct MatchExpanded<te::list<M, Ms...>>
+	struct MatchExpanded<te::list_type<M, Ms...>>
 	{
 		template<class F>
 		static inline void run(Everything& e, F f) {
