@@ -400,7 +400,6 @@ namespace mem
 			else {
 				using head_stripped_ref = std::remove_reference_t<te::head_t<L>>;
 				head_stripped_ref::template run<F, te::tail_t<L>, Args...>(e, f, args...);
-				rand();
 			}
 		}
 	};
