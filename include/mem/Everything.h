@@ -392,14 +392,15 @@ namespace mem
 			Loop::run<E, F, A>(e, f);
 		}
 
-		template<class E, class F, class L, class... Args>
+		template<class E, class F, te::list L, class... Args>
 		static inline void run(E& e, F f, Args... args) {
-			if constexpr (L::is_empty) {
+			if constexpr (te::is_empty_v<L>) {
 				f(args...);
 			}
 			else {
-				using head_stripped_ref = std::remove_reference_t<typename L::head>;
-				head_stripped_ref::template run<F, typename L::tail, Args...>(e, f, args...);
+				using head_stripped_ref = std::remove_reference_t<te::head_t<L>>;
+				head_stripped_ref::template run<F, te::tail_t<L>, Args...>(e, f, args...);
+				rand();
 			}
 		}
 	};
@@ -745,7 +746,7 @@ namespace mem
 			return true;
 		}
 		if constexpr (sizeof...(Ts) == 1) {
-			return this->signatures[i].test(Everything::component_index_v<typename te::list<Ts...>::head>);
+			return this->signatures[i].test(Everything::component_index_v<typename te::head_t<te::list_type<Ts...>>>);
 		}
 		else {
 			auto const sig = group_signature_v<Ts...>;
@@ -760,7 +761,11 @@ namespace mem
 
 	template<class F>
 	inline void Everything::match(F f) {
-		using arguments_list = te::map_t<std::remove_cvref_t, te::arguments_list_t<F>>;
+		using arguments_list = te::map_t<
+			te::type_function_t<std::remove_cvref_t>,
+			te::arguments_list_t<F>
+		>;
+
 		MatchExpanded<arguments_list>::run(*this, f);
 	}
 
