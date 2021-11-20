@@ -2,7 +2,7 @@
 
 namespace impl
 {
-	template<class T>
+	template<class T, class phantom = void>
 	struct LazyGlobal
 	{
 		T* operator*() const {
@@ -16,5 +16,5 @@ namespace impl
 	};
 }
 
-template<class T>
-constexpr impl::LazyGlobal<T> LazyGlobal = impl::LazyGlobal<T>{};
+template<class T, class phantom = void>
+constexpr impl::LazyGlobal<T, phantom> LazyGlobal = impl::LazyGlobal<T, phantom>{};
