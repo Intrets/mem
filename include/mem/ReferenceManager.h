@@ -111,6 +111,8 @@ public:
 	template<class N>
 	UniqueReference<B, T>& operator= (UniqueReference<B, N>&& other);
 
+	WeakReference<B, T> getWeak() const;
+
 	NO_COPY(UniqueReference);
 };
 
@@ -555,6 +557,11 @@ inline UniqueReference<B, T>& UniqueReference<B, T>::operator=(WeakReference<B, 
 template<class B, class T>
 inline UniqueReference<B, T>::~UniqueReference() {
 	WeakReference<B, T>::deleteObject();
+}
+
+template<class B, class T>
+inline WeakReference<B, T> UniqueReference<B, T>::getWeak() const {
+	return *this;
 }
 
 template<class B, class T>

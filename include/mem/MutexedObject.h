@@ -54,11 +54,11 @@ namespace mem
 	{
 		T& object;
 
-		T::ValueType* operator->() {
+		typename T::ValueType* operator->() {
 			return &this->object.object;
 		}
 
-		T::ValueType& operator*() {
+		typename T::ValueType& operator*() {
 			return this->object.object;
 		}
 
