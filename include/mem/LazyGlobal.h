@@ -29,6 +29,10 @@ namespace impl
 		T* operator->() const {
 			return LazyGlobal<T>::operator*();
 		}
+
+		T& get() const {
+			return *LazyGlobal<T>::operator*();
+		}
 	};
 }
 
