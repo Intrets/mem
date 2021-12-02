@@ -46,7 +46,6 @@ class Reference
 {
 public:
 	void* ptr = nullptr;
-	void* manager = nullptr;
 
 	bool operator==(Reference const& other) const;
 	bool operator==(void* other) const;
@@ -65,8 +64,6 @@ template <class B, class T>
 class WeakReference : public Reference
 {
 public:
-	ReferenceManager<B>* getManager() const;
-
 	T* get() const;
 
 	Handle getHandle() const;
@@ -80,12 +77,12 @@ public:
 	template<class N>
 	operator WeakReference<B, N>() const;
 
-	void deleteObject();
+	void deleteObject(ReferenceManager<B>& manager);
 	void clear();
 
 	WeakReference() = default;
 
-	WeakReference(ReferenceManager<B>& manager, B* p);
+	WeakReference(B* p);
 	WeakReference(ReferenceManager<B>& manager, Handle h);
 
 	virtual ~WeakReference() = default;
@@ -95,13 +92,15 @@ template<class B, class T>
 class UniqueReference : public WeakReference<B, T>
 {
 public:
-	UniqueReference() = default;
+	ReferenceManager<B>* manager{};
 
-	UniqueReference(WeakReference<B, T> ref);
+	ReferenceManager<B>* getManager() const;
+
+	UniqueReference();
+
+	UniqueReference(ReferenceManager<B>& manager, WeakReference<B, T> ref);
 	UniqueReference(ReferenceManager<B>& manager, B* p);
 	UniqueReference(ReferenceManager<B>& manager, Handle h);
-
-	UniqueReference<B, T>& operator= (WeakReference<B, T> const& other);
 
 	virtual ~UniqueReference();
 
@@ -123,16 +122,20 @@ private:
 	friend class ReferenceManager<B>;
 
 public:
+	ReferenceManager<B>* manager{};
+
+	ReferenceManager<B>* getManager() const;
+
 	WeakReference<B, T> getRef() const;
 
-	void set(WeakReference<B, T> r);
+	void set(ReferenceManager<B>& manager, WeakReference<B, T> r);
 
 	bool isValid() const;
 	void unset();
 
 	ManagedReference() = default;
 
-	ManagedReference(WeakReference<B, T> r);
+	ManagedReference(ReferenceManager<B>& manager, WeakReference<B, T> r);
 	ManagedReference(ReferenceManager<B>& manager, Handle h);
 	ManagedReference(ReferenceManager<B>& manager, B* p);
 
@@ -208,8 +211,8 @@ public:
 };
 
 template<class B, class T>
-inline ReferenceManager<B>* WeakReference<B, T>::getManager() const {
-	return static_cast<ReferenceManager<B>*>(this->manager);
+inline ReferenceManager<B>* UniqueReference<B, T>::getManager() const {
+	return this->manager;
 }
 
 template<class B, class T>
@@ -228,30 +231,26 @@ inline Reference::operator bool() const {
 }
 
 template<class B, class T>
-inline void WeakReference<B, T>::deleteObject() {
+inline void WeakReference<B, T>::deleteObject(ReferenceManager<B>& manager) {
 	if (this->isNotNull()) {
-		this->getManager()->deleteReference(this->getHandle());
+		manager.deleteReference(this->getHandle());
 		this->ptr = nullptr;
-		this->manager = nullptr;
 	}
 }
 
 template<class B, class T>
 inline void WeakReference<B, T>::clear() {
 	this->ptr = nullptr;
-	this->manager = nullptr;
 }
 
 template<class B, class T>
-inline WeakReference<B, T>::WeakReference(ReferenceManager<B>& manager_, B* p) {
+inline WeakReference<B, T>::WeakReference(B* p) {
 	this->ptr = p;
-	this->manager = &manager_;
 }
 
 template<class B, class T>
 inline WeakReference<B, T>::WeakReference(ReferenceManager<B>& manager_, Handle h) {
 	this->ptr = manager_.data[h].get();
-	this->manager = &manager_;
 #ifdef RTTI_CHECKS
 	assert(dynamic_cast<T*>(this->get()));
 #endif
@@ -271,20 +270,25 @@ inline void ManagedReference<B, T>::unset() {
 }
 
 template<class B, class T>
-inline ManagedReference<B, T>::ManagedReference(WeakReference<B, T> r) {
+inline ManagedReference<B, T>::ManagedReference(ReferenceManager<B>& manager, WeakReference<B, T> r) {
 	this->set(r);
 }
 
 template<class B, class T>
 inline ManagedReference<B, T>::ManagedReference(ReferenceManager<B>& manager, Handle h) {
 	auto ref = WeakReference<B, T>(manager, h);
-	this->set(ref);
+	this->set(manager, ref);
 }
 
 template<class B, class T>
 inline ManagedReference<B, T>::ManagedReference(ReferenceManager<B>& manager, B* p) {
-	auto ref = WeakReference<B, T>(manager, p);
-	this->set(ref);
+	auto ref = WeakReference<B, T>(p);
+	this->set(manager, ref);
+}
+
+template<class B, class T>
+inline ReferenceManager<B>* ManagedReference<B, T>::getManager() const {
+	return this->manager;
 }
 
 template<class B, class T>
@@ -293,15 +297,15 @@ inline WeakReference<B, T> ManagedReference<B, T>::getRef() const {
 }
 
 template<class B, class T>
-inline void ManagedReference<B, T>::set(WeakReference<B, T> r) {
-	assert(r.manager != nullptr);
-	assert(this->manager == nullptr || this->manager == r.manager);
+inline void ManagedReference<B, T>::set(ReferenceManager<B>& manager, WeakReference<B, T> r) {
+	assert(manager != nullptr);
+	assert(this->manager == nullptr || this->manager == manager);
 
 	if (this->isValid()) {
 		this->getManager()->unsubscribe(*this);
 	}
 	else {
-		this->manager = r.manager;
+		this->manager = manager;
 	}
 
 	this->ptr = r.get();
@@ -447,9 +451,8 @@ inline void ReferenceManager<B>::deleteReference(Handle h) {
 		return;
 	}
 	auto range = this->managedReferences.equal_range(h);
-	for_each(range.first, range.second, [](ManagedReferencesType::value_type& ref) -> void
-		{
-			ref.second->clearPtr();
+	for_each(range.first, range.second, [](ManagedReferencesType::value_type& ref) -> void {
+		ref.second->clearPtr();
 		});
 
 	this->managedReferences.erase(range.first, range.second);
@@ -532,31 +535,27 @@ inline void ReferenceManager<B>::completeReferences() {
 }
 
 template<class B, class T>
-inline UniqueReference<B, T>::UniqueReference(WeakReference<B, T> ref) : WeakReference<B, T>(ref) {
+inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, WeakReference<B, T> ref) : WeakReference<B, T>(ref) {
+	this->manager = manager_;
 }
 
 template<class B, class T>
-inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager, B* p) : WeakReference<B, T>(manager, p) {
+inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, B* p) : WeakReference<B, T>(p) {
+	this->manager = &manager_;
 }
 
 template<class B, class T>
 inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, Handle h) : WeakReference<B, T>(manager_, h) {
-}
-
-template<class B, class T>
-inline UniqueReference<B, T>& UniqueReference<B, T>::operator=(WeakReference<B, T> const& other) {
-	assert(this->isNull());
-	assert(this->manager == nullptr || this->manager == other.manager);
-
-	this->ptr = other.ptr;
-	this->manager = other.manager;
-
-	return *this;
+	this->manager = &manager_;
 }
 
 template<class B, class T>
 inline UniqueReference<B, T>::~UniqueReference() {
-	WeakReference<B, T>::deleteObject();
+	if (this->isNotNull()) {
+		this->getManager()->deleteReference(this->getHandle());
+		this->ptr = nullptr;
+		this->manager = nullptr;
+	}
 }
 
 template<class B, class T>
@@ -631,14 +630,14 @@ inline WeakReference<B, N> WeakReference<B, T>::as() const {
 #ifdef RTTI_CHECKS
 	assert(dynamic_cast<N*>(this->get()));
 #endif
-	return WeakReference<B, N>(*this->getManager(), this->get());
+	return WeakReference<B, N>(this->get());
 }
 
 template<class B, class T>
 template<class N>
 inline WeakReference<B, T>::operator WeakReference<B, N>() const {
 	static_assert(std::is_base_of<N, T>::value, "WeakReference implicit cast: not a super class.");
-	return WeakReference<B, N>(*this->getManager(), this->get());
+	return WeakReference<B, N>(this->get());
 }
 
 inline bool Reference::operator==(Reference const& other) const {
