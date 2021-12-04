@@ -69,5 +69,7 @@ namespace mem
 		~ScopedAccess() {
 			this->object.mutex.unlock();
 		}
+
+		NO_COPY_MOVE(ScopedAccess);
 	};
 }
