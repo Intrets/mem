@@ -96,8 +96,6 @@ public:
 
 	ReferenceManager<B>* getManager() const;
 
-	UniqueReference();
-
 	UniqueReference(ReferenceManager<B>& manager, WeakReference<B, T> ref);
 	UniqueReference(ReferenceManager<B>& manager, B* p);
 	UniqueReference(ReferenceManager<B>& manager, Handle h);
@@ -350,7 +348,7 @@ inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&& ...args) {
 	this->data[h]->selfHandle = h;
 	this->usedHandle[h] = true;
 	auto ptr = this->data[h].get();
-	return WeakReference<B, T>(*this, ptr);
+	return WeakReference<B, T>(ptr);
 }
 
 template<class B>
