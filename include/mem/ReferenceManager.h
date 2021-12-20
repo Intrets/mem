@@ -65,6 +65,7 @@ class WeakReference : public Reference
 {
 public:
 	T* get() const;
+	T* operator->() const;
 
 	Handle getHandle() const;
 
@@ -216,6 +217,11 @@ inline ReferenceManager<B>* UniqueReference<B, T>::getManager() const {
 template<class B, class T>
 inline T* WeakReference<B, T>::get() const {
 	return static_cast<T*>(this->ptr);
+}
+
+template<class B, class T>
+inline T* WeakReference<B, T>::operator->() const {
+	return this->get();
 }
 
 template<class B, class T>
