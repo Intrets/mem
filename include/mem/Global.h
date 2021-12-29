@@ -52,6 +52,13 @@ namespace impl
 			provide(new T(std::forward<Args>(args)...));
 		}
 
+		template<class ...Args>
+		void tryInit(Args&& ...args) const {
+			if (this->object == nullptr) {
+				provide(new T(std::forward<Args>(args)...));
+			}
+		}
+
 	private:
 		static inline T* object = nullptr;
 	};
