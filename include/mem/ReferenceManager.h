@@ -202,7 +202,7 @@ public:
 	void clear();
 
 	ReferenceManager(int32_t size_);
-	ReferenceManager() : ReferenceManager(10'000) {
+	ReferenceManager() : ReferenceManager(100'000) {
 	};
 	~ReferenceManager();
 
