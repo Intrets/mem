@@ -126,6 +126,7 @@ public:
 	ReferenceManager<B>* getManager() const;
 
 	WeakReference<B, T> getRef() const;
+	WeakReference<B, T> getIfValid() const;
 
 	void set(ReferenceManager<B>& manager, WeakReference<B, T> r);
 
@@ -301,15 +302,24 @@ inline WeakReference<B, T> ManagedReference<B, T>::getRef() const {
 }
 
 template<class B, class T>
-inline void ManagedReference<B, T>::set(ReferenceManager<B>& manager, WeakReference<B, T> r) {
-	assert(manager != nullptr);
-	assert(this->manager == nullptr || this->manager == manager);
+inline WeakReference<B, T> ManagedReference<B, T>::getIfValid() const {
+	if (this->isValid()) {
+		return this->getRef();
+	}
+	else {
+		return WeakReference<B, T>();
+	}
+}
+
+template<class B, class T>
+inline void ManagedReference<B, T>::set(ReferenceManager<B>& manager_, WeakReference<B, T> r) {
+	assert(this->manager == nullptr || this->manager == &manager_);
 
 	if (this->isValid()) {
 		this->getManager()->unsubscribe(*this);
 	}
 	else {
-		this->manager = manager;
+		this->manager = &manager_;
 	}
 
 	this->ptr = r.get();
