@@ -622,7 +622,7 @@ template<class B, class T>
 inline ManagedReference<B, T>& ManagedReference<B, T>::operator=(ManagedReference&& other) noexcept {
 	if (this != &other) {
 		if (auto ref = other.getRef()) {
-			this->set(ref);
+			this->set(*other.manager, ref);
 		}
 		other.unset();
 	}
