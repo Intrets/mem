@@ -33,7 +33,6 @@ make_module(
 		MutexedObject
 	CXX_STANDARD 20
 	REQUIRED_LIBS
-		misc
 		tepp
 	OPTIONAL_LIBS
 		serial
