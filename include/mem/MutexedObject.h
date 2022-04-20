@@ -46,8 +46,21 @@ namespace mem
 			return ScopedAccess(*this);
 		}
 
+		void set(T&& object_) {
+			auto access = this->acquire();
+
+			*access = std::forward<T>(object_);
+		}
+
+		T getCopy() {
+			auto access = this->acquire();
+
+			return *access;
+		}
+
 		template<class... Args>
-		MutexedObject(Args&&... args) : object(std::forward<Args>(args)...) {};
+		MutexedObject(Args&&... args) : object(std::forward<Args>(args)...) {
+		};
 		~MutexedObject() = default;
 
 		NO_COPY(MutexedObject);
@@ -58,6 +71,7 @@ namespace mem
 	struct ScopedAccess
 	{
 		T& object;
+		std::unique_lock<std::mutex> lock;
 
 		typename T::ValueType* operator->() {
 			return &this->object.object;
@@ -67,13 +81,10 @@ namespace mem
 			return this->object.object;
 		}
 
-		ScopedAccess(T& object_) : object(object_) {
-			this->object.mutex.lock();
+		ScopedAccess(T& object_) : object(object_) , lock(object.mutex) {
 		}
 
-		~ScopedAccess() {
-			this->object.mutex.unlock();
-		}
+		~ScopedAccess() = default;
 
 		NO_COPY_MOVE(ScopedAccess);
 	};
