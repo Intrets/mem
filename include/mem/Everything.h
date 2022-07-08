@@ -761,10 +761,7 @@ namespace mem
 
 	template<class... Ts>
 	inline bool Everything::has(Index<Everything> i) const {
-		if constexpr (sizeof...(Ts) == 0) {
-			assert(0);
-			return true;
-		}
+		static_assert(sizeof...(Ts) != 0);
 		if constexpr (sizeof...(Ts) == 1) {
 			return this->signatures[i].test(Everything::component_index_v<typename te::head_t<te::list_type<Ts...>>>);
 		}
