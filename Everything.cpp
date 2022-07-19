@@ -115,6 +115,7 @@ namespace mem
 	}
 
 	UniqueObject Everything::clone(std::vector<Index<Component>> components, WeakObject const& obj) {
+		assert(0);
 		auto p = this->makeUnique();
 		for (auto& type : components) {
 			if (obj.has(type)) {
