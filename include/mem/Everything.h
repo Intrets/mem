@@ -64,7 +64,7 @@ namespace mem
 #ifdef LIB_SERIAL
 		std::unordered_map<std::string, StructInformation> infos{};
 #else
-		std::unordered_map<int32_t, StructInformation> infos{};
+		std::unordered_map<size_t, StructInformation> infos{};
 #endif
 
 		template<class T>
@@ -607,6 +607,7 @@ namespace mem
 #endif
 
 	inline Index<RawData> RawData::cloneUntyped(Index<RawData> i, Index<Everything> j) {
+		assert(0);
 		assert(this->index > 1);
 		assert(i > 0 && i <= this->index);
 		assert(this->structInformation.clone != nullptr);
