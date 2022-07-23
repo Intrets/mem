@@ -657,7 +657,7 @@ namespace mem
 	}
 
 	inline void Everything::remove(Index<Everything> i) {
-		if (i == 0) {
+		if (i == 0 || !this->isValidIndex(i)) {
 			return;
 		}
 
@@ -671,7 +671,10 @@ namespace mem
 
 		this->qualifiers[i] = this->getNextQualifier();
 
+		assert(std::ranges::find(this->removed, i) == this->removed.end());
 		this->removed.push_back(i);
+
+		assert(this->validIndices[i]);
 		this->validIndices[i] = false;
 	}
 
@@ -684,6 +687,7 @@ namespace mem
 
 		for (auto i : this->removed) {
 			assert(this->signatures[i].none());
+			assert(std::ranges::find(this->freeIndirections, i) == this->freeIndirections.end());
 			this->freeIndirections.push_back(i);
 		}
 
@@ -703,7 +707,7 @@ namespace mem
 #ifdef LIB_SERIAL
 	inline bool Everything::print(serial::Serializer& serializer, Index<Everything> index, Index<Component> type) {
 		return this->data[type].print(serializer, this->dataIndices[type][index]);
-	}
+}
 #endif
 
 	inline bool Everything::has(Index<Everything> i, Index<Component> type) const {
