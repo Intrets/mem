@@ -83,6 +83,8 @@ namespace mem
 
 			this->validIndices[i] = true;
 
+			assert(this->signatures[i].none());
+
 			return { i, this };
 		}
 		else {
@@ -95,6 +97,8 @@ namespace mem
 			this->validIndices.push_back(true);
 
 			Index<Everything> i{ this->signatures.size() - 1 };
+
+			assert(this->signatures[i].none());
 
 			return { i, this };
 		}
