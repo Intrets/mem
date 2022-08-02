@@ -24,6 +24,7 @@
 #include <algorithm>
 
 #include <tepp/tepp.h>
+#include <tepp/optional_ref.h>
 
 #include "Global.h"
 #include "LazyGlobal.h"
@@ -164,7 +165,7 @@ namespace mem
 		inline void remove();
 
 		template<class T>
-		inline std::optional<T*> getMaybe();
+		inline te::optional_ref<T> getMaybe();
 
 		template<class T>
 		inline T& get();
@@ -172,11 +173,22 @@ namespace mem
 		template<class T, class... Args>
 		inline T& add(Args&&... args);
 
-		template<class T>
+		template<class T, class... Args>
+		inline T& addOrGet(Args&&... args);
+
+		template<class T, class... Args>
+		inline T& addOrReplace(Args&&... args);
+
+		template<class T, class... Args>
+		inline T& tryAdd(Args&&... args);
+
+		template<class... Ts>
 		inline bool has() const;
 
 		bool has(Index<Component> i) const;
 		Index<RawData> getComponentIndex(Index<Component> type) const;
+
+		bool operator==(WeakObject const& other);
 	};
 
 	struct UniqueObject : WeakObject
@@ -362,8 +374,11 @@ namespace mem
 
 		template<class T>
 		inline void removeComponent(Index<Everything> i);
-
 		inline void removeComponent(Index<Everything> i, Index<Component> type);
+
+		template<class T>
+		inline void removeAll();
+		inline void removeAll(Index<Component> type);
 
 		template<class T, class... Args>
 		inline T& add(Index<Everything> i, Args&&... args);
@@ -700,6 +715,13 @@ namespace mem
 		this->signatures[i].reset(type);
 	}
 
+	inline void Everything::removeAll(Index<Component> type) {
+		for (size_t i = 1; i < this->data[type].indices.size(); i++) {
+			auto index = this->data[type].indices[i];
+			this->removeComponent(index, type);
+		}
+	}
+
 	inline RawData& Everything::gets(Index<Component> type) {
 		return this->data[type];
 	}
@@ -707,7 +729,7 @@ namespace mem
 #ifdef LIB_SERIAL
 	inline bool Everything::print(serial::Serializer& serializer, Index<Everything> index, Index<Component> type) {
 		return this->data[type].print(serializer, this->dataIndices[type][index]);
-}
+	}
 #endif
 
 	inline bool Everything::has(Index<Everything> i, Index<Component> type) const {
@@ -743,6 +765,11 @@ namespace mem
 	template<class T>
 	inline void Everything::removeComponent(Index<Everything> i) {
 		this->removeComponent(i, component_index_v<T>);
+	}
+
+	template<class T>
+	inline void Everything::removeAll() {
+		this->removeAll(component_index_v<T>);
 	}
 
 	template<class T, class... Args>
@@ -813,12 +840,12 @@ namespace mem
 	}
 
 	template<class T>
-	inline std::optional<T*> WeakObject::getMaybe() {
+	inline te::optional_ref<T> WeakObject::getMaybe() {
 		if (this->has<T>()) {
-			return &this->get<T>();
+			return this->get<T>();
 		}
 		else {
-			return std::nullopt;
+			return te::nullopt;
 		}
 	}
 
@@ -832,10 +859,41 @@ namespace mem
 		return this->proxy->add<T>(this->index, std::forward<Args>(args)...);
 	}
 
-	template<class T>
+	template<class T, class... Args>
+	inline T& WeakObject::addOrGet(Args&&... args) {
+		if (this->has<T>()) {
+			return this->get<T>();
+		}
+		else {
+			return this->add<T>(std::forward<Args>(args)...);
+		}
+	}
+
+	template<class T, class ...Args>
+	inline T& WeakObject::addOrReplace(Args&&... args) {
+		if (auto component = this->getMaybe<T>()) {
+			component.value() = T(std::forward<T>(args)...);
+			return component.value();
+		}
+		else {
+			return this->add<T>(std::forward<Args>(args)...);
+		}
+	}
+
+	template<class T, class... Args>
+	inline T& WeakObject::tryAdd(Args&&... args) {
+		if (this->has<T>()) {
+			return this->get<T>();
+		}
+		else {
+			return this->add<T>(std::forward<Args>(args)...);
+		}
+	}
+
+	template<class... Ts>
 	inline bool WeakObject::has() const {
 		assert(this->isNotNull());
-		return this->proxy->has<T>(this->index);
+		return this->proxy->has<Ts...>(this->index);
 	}
 
 	template<class T>
@@ -846,7 +904,7 @@ namespace mem
 		return infos[LazyGlobal<Everything::ComponentIndex<T>>->val];
 #endif
 	}
-}
+	}
 
 using mem::WeakObject;
 using mem::UniqueObject;
@@ -1056,6 +1114,6 @@ struct serial::Serializable<mem::RawData>
 			ALL(indices),
 			ALL(deletions)
 			);
-	}
+}
 };
 #endif

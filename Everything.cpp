@@ -76,6 +76,10 @@ namespace mem
 		return this->proxy->getComponentIndex(this->index, type);
 	}
 
+	bool WeakObject::operator==(WeakObject const& other) {
+		return this->index == other.index && this->proxy == other.proxy;
+	}
+
 	WeakObject Everything::make() {
 		if (!this->freeIndirections.empty()) {
 			auto i = this->freeIndirections.back();
@@ -182,6 +186,7 @@ namespace mem
 
 		return &this->object;
 	}
+
 	QualifiedObject& QualifiedObject::operator=(WeakObject const& other) noexcept {
 		this->set(other);
 
