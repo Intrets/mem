@@ -23,9 +23,10 @@
 #include <serial/Serializer.h>
 #endif
 
-template<class T, std::integral index_type = size_t>
+template<class T, std::integral index_type_ = size_t>
 struct Index
 {
+	using index_type = index_type_;
 	index_type i;
 
 	operator index_type() const {
@@ -60,6 +61,14 @@ struct Index
 
 	void set(index_type j) {
 		this->i = j;
+	}
+};
+
+template<class T>
+struct std::hash<Index<T>>
+{
+	std::size_t operator()(Index<T> const& index) const noexcept {
+		return std::hash<Index<T>::index_type>()(index.i);
 	}
 };
 
