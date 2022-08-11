@@ -718,7 +718,9 @@ namespace mem
 	inline void Everything::removeAll(Index<Component> type) {
 		for (size_t i = 1; i < this->data[type].indices.size(); i++) {
 			auto index = this->data[type].indices[i];
-			this->removeComponent(index, type);
+			if (this->has(index, type)) {
+				this->removeComponent(index, type);
+			}
 		}
 	}
 
@@ -903,7 +905,7 @@ namespace mem
 #else
 		return infos[LazyGlobal<Everything::ComponentIndex<T>>->val];
 #endif
-	}
+}
 	}
 
 using mem::WeakObject;
