@@ -294,9 +294,11 @@ namespace mem
 				};
 #endif
 
-				info.clone = [](void* source, void* target) {
-					new (target) T(*reinterpret_cast<T*>(source));
-				};
+				if constexpr (std::copy_constructible<T>) {
+					info.clone = [](void* source, void* target) {
+						new (target) T(*reinterpret_cast<T*>(source));
+					};
+				}
 
 #ifdef LIB_SERIAL
 				LazyGlobal<StoredStructInformations>->infos.insert({ info.name, info });
