@@ -52,6 +52,12 @@ namespace mem
 			*access = std::forward<T>(object_);
 		}
 
+		void set(T const& object_) {
+			auto access = this->acquire();
+
+			*access = object_;
+		}
+
 		T getCopy() {
 			auto access = this->acquire();
 
