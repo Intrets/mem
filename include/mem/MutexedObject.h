@@ -30,20 +30,26 @@ namespace mem
 	template<class>
 	struct ScopedAccess;
 
-	template<class T>
+	template<class T, class mutex_type_ = std::mutex>
 	struct MutexedObject
 	{
+		using mutex_type = mutex_type_;
+
 	private:
-		friend struct ScopedAccess<MutexedObject<T>>;
+		friend struct ScopedAccess<MutexedObject<T, mutex_type>>;
 
 		using ValueType = T;
 
 		T object;
-		std::mutex mutex;
+		mutex_type mutex;
 
 	public:
+		auto& cheat() {
+			return this->object;
+		}
+
 		auto acquire() {
-			return ScopedAccess(*this);
+			return ScopedAccess<MutexedObject<T, mutex_type>>(*this);
 		}
 
 		void set(T&& object_) {
@@ -77,7 +83,7 @@ namespace mem
 	struct ScopedAccess
 	{
 		T& object;
-		std::unique_lock<std::mutex> lock;
+		std::unique_lock<typename T::mutex_type> lock;
 
 		typename T::ValueType* operator->() {
 			return &this->object.object;
@@ -87,7 +93,7 @@ namespace mem
 			return this->object.object;
 		}
 
-		ScopedAccess(T& object_) : object(object_) , lock(object.mutex) {
+		ScopedAccess(T& object_) : object(object_), lock(object.mutex) {
 		}
 
 		~ScopedAccess() = default;
