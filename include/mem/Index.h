@@ -74,9 +74,6 @@ struct Index
 
 	Index& operator=(Index const&) = default;
 	Index& operator=(Index&&) = default;
-
-	template<class S>
-	Index(S const& s);
 };
 
 template<class T, class S, class index_type = default_index_type>
@@ -103,9 +100,3 @@ struct serial::Serializable<Index<T>>
 	}
 };
 #endif
-
-template<class T, std::integral index_type_>
-template<class S>
-inline Index<T, index_type_>::Index(S const& s) : Index<T, index_type_>(IndexConverter<T, S, index_type_>::run(s)) {
-};
-
