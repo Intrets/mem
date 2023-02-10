@@ -3,30 +3,38 @@
 
 #pragma once
 
-#include <memory>
-#include <unordered_map>
-#include <unordered_set>
-#include <set>
-#include <type_traits>
-#include <optional>
-#include <iostream>
 #include <algorithm>
 #include <cassert>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <set>
+#include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
 
 #ifdef RTTI_CHECKS
 #include <typeinfo>
 #endif
 
-#define DEFAULT_COPY(T) T(const T&) = default; T& operator=(const T&) = default;
-#define NO_COPY(T) T(const T&) = delete; T& operator=(const T&) = delete;
-#define DEFAULT_MOVE(T) T(T&&) = default; T& operator=(T&&) = default;
-#define NO_MOVE(T) T(T&&) = delete; T& operator=(T&&) = delete;
+#define DEFAULT_COPY(T) \
+	T(const T&) = default; \
+	T& operator=(const T&) = default;
+#define NO_COPY(T) \
+	T(const T&) = delete; \
+	T& operator=(const T&) = delete;
+#define DEFAULT_MOVE(T) \
+	T(T&&) = default; \
+	T& operator=(T&&) = default;
+#define NO_MOVE(T) \
+	T(T&&) = delete; \
+	T& operator=(T&&) = delete;
 #define DEFAULT_COPY_MOVE(T) DEFAULT_COPY(T) DEFAULT_MOVE(T)
 #define NO_COPY_MOVE(T) NO_COPY(T) NO_MOVE(T)
 
 using Handle = int32_t;
 
-template <class B>
+template<class B>
 class ReferenceManager;
 
 class Reference
@@ -47,7 +55,7 @@ public:
 	virtual ~Reference() = default;
 };
 
-template <class B, class T>
+template<class B, class T>
 class WeakReference : public Reference
 {
 public:
@@ -94,14 +102,14 @@ public:
 	UniqueReference(UniqueReference<B, N>&& other);
 
 	template<class N>
-	UniqueReference<B, T>& operator= (UniqueReference<B, N>&& other);
+	UniqueReference<B, T>& operator=(UniqueReference<B, N>&& other);
 
 	WeakReference<B, T> getWeak() const;
 
 	NO_COPY(UniqueReference);
 };
 
-template <class B, class T>
+template<class B, class T>
 class ManagedReference : private WeakReference<B, T>
 {
 private:
@@ -127,15 +135,15 @@ public:
 	ManagedReference(ReferenceManager<B>& manager, B* p);
 
 	ManagedReference(ManagedReference&& other) noexcept;
-	ManagedReference<B, T>& operator= (ManagedReference&& other) noexcept;
+	ManagedReference<B, T>& operator=(ManagedReference&& other) noexcept;
 
-	ManagedReference(const ManagedReference&);
-	ManagedReference& operator=(const ManagedReference&);
+	ManagedReference(ManagedReference const&);
+	ManagedReference& operator=(ManagedReference const&);
 
 	virtual ~ManagedReference();
 };
 
-template <class B>
+template<class B>
 class ReferenceManager
 {
 private:
@@ -150,26 +158,22 @@ public:
 	void addIncomplete(Handle h, B*& ptr);
 	void completeReferences();
 
-	int32_t size;
 	typedef std::unordered_multimap<Handle, Reference*> ManagedReferencesType;
 
 	ManagedReferencesType managedReferences;
-	std::unordered_map<Handle, std::unique_ptr<B>> data;
-	std::set<Handle> freeHandles;
-	bool freeHandlesSorted = true;
 
-	std::vector<int32_t> usedHandle;
+	std::vector<std::unique_ptr<B>> data{};
+
+	std::vector<Handle> freed{};
 
 	template<class T>
 	T* getPtr(Handle h);
 
-	template <class T, class... Args>
+	template<class T, class... Args>
 	WeakReference<B, T> makeRef(Args&&... args);
 
-	template <class T, class... Args>
+	template<class T, class... Args>
 	UniqueReference<B, T> makeUniqueRef(Args&&... args);
-
-	bool storeReference(Handle h, B* ref);
 
 	template<class T>
 	void subscribe(ManagedReference<B, T>& toManage);
@@ -189,9 +193,7 @@ public:
 
 	void clear();
 
-	ReferenceManager(int32_t size_);
-	ReferenceManager() : ReferenceManager(100'000) {
-	};
+	ReferenceManager();
 	~ReferenceManager();
 
 	NO_COPY_MOVE(ReferenceManager);
@@ -314,14 +316,14 @@ inline void ManagedReference<B, T>::set(ReferenceManager<B>& manager_, WeakRefer
 }
 
 template<class B, class T>
-inline ManagedReference<B, T>::ManagedReference(const ManagedReference& other) {
+inline ManagedReference<B, T>::ManagedReference(ManagedReference const& other) {
 	if (auto ref = other.getRef()) {
 		this->set(ref);
 	}
 }
 
 template<class B, class T>
-inline ManagedReference<B, T>& ManagedReference<B, T>::operator=(const ManagedReference& other) {
+inline ManagedReference<B, T>& ManagedReference<B, T>::operator=(ManagedReference const& other) {
 	if (this != &other) {
 		if (auto ref = other.getRef()) {
 			this->set(ref);
@@ -344,24 +346,22 @@ inline T* ReferenceManager<B>::getPtr(Handle h) {
 }
 
 template<class B>
-template<class T, class ...Args>
-inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&& ...args) {
+template<class T, class... Args>
+inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&&... args) {
 	Handle h = this->getFreeHandle();
 	this->data[h] = std::make_unique<T>(std::forward<Args>(args)...);
-	this->data[h]->selfHandle = h;
-	this->usedHandle[h] = true;
 	auto ptr = this->data[h].get();
+	ptr->selfHandle = h;
 	return WeakReference<B, T>(ptr);
 }
 
 template<class B>
-template<class T, class ...Args>
-inline UniqueReference<B, T> ReferenceManager<B>::makeUniqueRef(Args&& ...args) {
+template<class T, class... Args>
+inline UniqueReference<B, T> ReferenceManager<B>::makeUniqueRef(Args&&... args) {
 	Handle h = this->getFreeHandle();
 	this->data[h] = std::make_unique<T>(std::forward<Args>(args)...);
-	this->data[h]->selfHandle = h;
-	this->usedHandle[h] = true;
 	auto ptr = this->data[h].get();
+	ptr->selfHandle = h;
 	return UniqueReference<B, T>(*this, ptr);
 }
 
@@ -436,17 +436,6 @@ inline void ReferenceManager<B>::deleteReference(ManagedReference<B, T>& ref) {
 }
 
 template<class B>
-inline bool ReferenceManager<B>::storeReference(Handle h, B* ref) {
-	if (freeHandles.count(h) == 0) {
-		return false;
-	}
-	freeHandles.erase(h);
-	usedHandle[h] = true;
-	data[h] = std::unique_ptr<B>(ref);
-	return true;
-}
-
-template<class B>
 inline void ReferenceManager<B>::deleteReference(Handle h) {
 	if (h == 0) {
 		return;
@@ -454,7 +443,7 @@ inline void ReferenceManager<B>::deleteReference(Handle h) {
 	auto range = this->managedReferences.equal_range(h);
 	for_each(range.first, range.second, [](ManagedReferencesType::value_type& ref) -> void {
 		ref.second->clearPtr();
-		});
+	});
 
 	this->managedReferences.erase(range.first, range.second);
 
@@ -471,25 +460,15 @@ inline void ReferenceManager<B>::clear() {
 	}
 	this->managedReferences.clear();
 
-	while (!this->data.empty()) {
-		this->data.erase(this->data.begin());
-	}
+	this->data.clear();
+	this->data.emplace_back(nullptr);
 
-	this->freeHandles.clear();
-	for (int32_t i = 1; i < this->size; i++) {
-		this->freeHandles.insert(i);
-	}
-
-	std::fill(this->usedHandle.begin(), this->usedHandle.end(), false);
+	this->freed.clear();
 }
 
 template<class B>
-inline ReferenceManager<B>::ReferenceManager(int32_t size_) :
-	size(size_),
-	usedHandle(size) {
-	for (int32_t i = 1; i < this->size; i++) {
-		this->freeHandles.insert(i);
-	}
+inline ReferenceManager<B>::ReferenceManager() {
+	this->data.emplace_back(nullptr);
 }
 
 template<class B>
@@ -499,17 +478,24 @@ inline ReferenceManager<B>::~ReferenceManager() {
 
 template<class B>
 inline void ReferenceManager<B>::freeData(Handle h) {
-	data.erase(h);
-	usedHandle[h] = false;
-	freeHandles.insert(h);
+	this->data[h].reset();
+	this->freed.push_back(h);
 }
 
 template<class B>
 inline Handle ReferenceManager<B>::getFreeHandle() {
-	auto it = freeHandles.begin();
-	Handle h = *it;
-	freeHandles.erase(it);
-	return h;
+	if (!this->freed.empty()) {
+		auto handle = this->freed.back();
+		this->freed.pop_back();
+
+		return handle;
+	}
+	else {
+		auto handle = static_cast<int32_t>(this->data.size());
+		this->data.emplace_back(nullptr);
+
+		return handle;
+	}
 }
 
 template<class B>
@@ -536,17 +522,20 @@ inline void ReferenceManager<B>::completeReferences() {
 }
 
 template<class B, class T>
-inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, WeakReference<B, T> ref) : WeakReference<B, T>(ref) {
+inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, WeakReference<B, T> ref)
+    : WeakReference<B, T>(ref) {
 	this->manager = manager_;
 }
 
 template<class B, class T>
-inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, B* p) : WeakReference<B, T>(p) {
+inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, B* p)
+    : WeakReference<B, T>(p) {
 	this->manager = &manager_;
 }
 
 template<class B, class T>
-inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, Handle h) : WeakReference<B, T>(manager_, h) {
+inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, Handle h)
+    : WeakReference<B, T>(manager_, h) {
 	this->manager = &manager_;
 }
 
