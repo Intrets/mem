@@ -45,6 +45,8 @@ public:
 	bool operator==(Reference const& other) const;
 	bool operator==(void* other) const;
 
+	bool operator<(Reference const& other) const;
+
 	bool isNotNull() const;
 	bool isNull() const;
 
@@ -636,6 +638,10 @@ inline bool Reference::operator==(Reference const& other) const {
 
 inline bool Reference::operator==(void* other) const {
 	return this->ptr == other;
+}
+
+inline bool Reference::operator<(Reference const& other) const {
+	return this->ptr < other.ptr;
 }
 
 inline bool Reference::isNotNull() const {
