@@ -94,6 +94,9 @@ public:
 
 	ReferenceManager<B>* getManager() const;
 
+	template<class S>
+	UniqueReference<B, S> convert();
+
 	UniqueReference(ReferenceManager<B>& manager, WeakReference<B, T> ref);
 	UniqueReference(ReferenceManager<B>& manager, B* p);
 	UniqueReference(ReferenceManager<B>& manager, Handle h);
@@ -553,6 +556,12 @@ inline UniqueReference<B, T>::~UniqueReference() {
 template<class B, class T>
 inline WeakReference<B, T> UniqueReference<B, T>::getWeak() const {
 	return *this;
+}
+
+template<class B, class T>
+template<class S>
+inline UniqueReference<B, S> UniqueReference<B, T>::convert() {
+	return std::move(*this);
 }
 
 template<class B, class T>
