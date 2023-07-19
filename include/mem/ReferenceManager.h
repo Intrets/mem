@@ -168,6 +168,7 @@ public:
 	ManagedReferencesType managedReferences;
 
 	std::vector<std::unique_ptr<B>> data{};
+	uint64_t uniqueIdentifierCounter = 0;
 
 	std::vector<Handle> freed{};
 
@@ -350,24 +351,32 @@ inline T* ReferenceManager<B>::getPtr(Handle h) {
 	return static_cast<T*>(data[h].get());
 }
 
+template<class T>
+concept has_unique_identifier_member = requires(T t) {{ t.uniqueIdentifier } -> std::assignable_from<uint64_t>; };
+
 template<class B>
 template<class T, class... Args>
 inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&&... args) {
 	Handle h = this->getFreeHandle();
-	this->data[h] = std::make_unique<T>(std::forward<Args>(args)...);
-	auto ptr = this->data[h].get();
+
+	auto object = std::make_unique<T>(std::forward<Args>(args)...);
+	auto ptr = object.get();
+
+	this->data[h] = std::move(object) ;
+
 	ptr->selfHandle = h;
+
+	if constexpr (has_unique_identifier_member<B>) {
+		ptr->uniqueIdentifier = this->uniqueIdentifierCounter++;
+	}
+
 	return WeakReference<B, T>(ptr);
 }
 
 template<class B>
 template<class T, class... Args>
 inline UniqueReference<B, T> ReferenceManager<B>::makeUniqueRef(Args&&... args) {
-	Handle h = this->getFreeHandle();
-	this->data[h] = std::make_unique<T>(std::forward<Args>(args)...);
-	auto ptr = this->data[h].get();
-	ptr->selfHandle = h;
-	return UniqueReference<B, T>(*this, ptr);
+	return UniqueReference<B, T>(*this, this->makeRef<T>(std::forward<Args>(args)...).get());
 }
 
 template<class B>
