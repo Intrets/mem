@@ -362,7 +362,7 @@ inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&&... args) {
 	auto object = std::make_unique<T>(std::forward<Args>(args)...);
 	auto ptr = object.get();
 
-	this->data[h] = std::move(object) ;
+	this->data[h] = std::move(object);
 
 	ptr->selfHandle = h;
 
@@ -596,8 +596,10 @@ inline UniqueReference<B, T>& UniqueReference<B, T>::operator=(UniqueReference<B
 	}
 	assert(this->ptr != other.ptr);
 	assert(this->manager == nullptr || this->manager == other.manager);
-	assert(other.isNotNull());
-	assert(this->isNull());
+
+	if (this->manager) {
+		this->deleteObject(*this->manager);
+	}
 
 	this->ptr = other.ptr;
 	this->manager = other.manager;
