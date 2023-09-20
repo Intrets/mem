@@ -215,7 +215,7 @@ public:
 
 	std::vector<uint64_t> identifiers{};
 	std::vector<std::unique_ptr<B>> data{};
-	uint64_t uniqueIdentifierCounter = 0;
+	uint64_t uniqueIdentifierCounter = 1;
 
 	std::vector<Handle> freed{};
 
@@ -759,8 +759,9 @@ inline void QualifiedReference<B, T>::set(ReferenceManager<B>& manager_, WeakRef
 	assert(this->manager == nullptr || this->manager == &manager_);
 
 	this->manager = &manager_;
+	this->handle = r->selfHandle;
 	this->ptr = r.get();
-	this->qualifier = r->qualifier;
+	this->qualifier = uint64_t(r->uniqueIdentifier);
 }
 
 template<has_unique_identifier_member B, class T>
