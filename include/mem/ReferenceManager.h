@@ -32,8 +32,6 @@
 #define DEFAULT_COPY_MOVE(T) DEFAULT_COPY(T) DEFAULT_MOVE(T)
 #define NO_COPY_MOVE(T) NO_COPY(T) NO_MOVE(T)
 
-using Handle = int32_t;
-
 template<class B>
 class ReferenceManager;
 
@@ -56,6 +54,8 @@ public:
 
 	virtual ~Reference() = default;
 };
+
+using Handle = uint64_t;
 
 template<class B, class T>
 class WeakReference : public Reference
@@ -86,6 +86,23 @@ public:
 	virtual ~WeakReference() = default;
 };
 
+namespace detail::has_unique_identifier_member
+{
+	template<class T>
+	concept helper =
+	    std::constructible_from<uint64_t, std::remove_cvref_t<T>> &&
+	    std::constructible_from<std::remove_cvref_t<T>, uint64_t>;
+}
+
+template<class T>
+concept has_unique_identifier_member =
+    requires(T t) {
+	    { t.uniqueIdentifier } -> detail::has_unique_identifier_member::helper;
+    };
+
+template<has_unique_identifier_member B, class T>
+class QualifiedReference;
+
 template<class B, class T>
 class UniqueReference : public WeakReference<B, T>
 {
@@ -93,6 +110,8 @@ public:
 	ReferenceManager<B>* manager{};
 
 	ReferenceManager<B>* getManager() const;
+
+	QualifiedReference<B, T> getQualified() const;
 
 	template<class S>
 	UniqueReference<B, S> convert();
@@ -147,20 +166,6 @@ public:
 
 	virtual ~ManagedReference();
 };
-
-namespace detail::has_unique_identifier_member
-{
-	template<class T>
-	concept helper =
-	    std::constructible_from<uint64_t, std::remove_cvref_t<T>> &&
-	    std::constructible_from<std::remove_cvref_t<T>, uint64_t>;
-}
-
-template<class T>
-concept has_unique_identifier_member =
-    requires(T t) {
-	    { t.uniqueIdentifier } -> detail::has_unique_identifier_member::helper;
-    };
 
 template<has_unique_identifier_member B, class T>
 class QualifiedReference : private WeakReference<B, T>
@@ -222,8 +227,14 @@ public:
 	template<class T>
 	T* getPtr(Handle h);
 
+	template<class T>
+	WeakReference<B, T> storeRef(std::unique_ptr<T> object);
+
 	template<class T, class... Args>
 	WeakReference<B, T> makeRef(Args&&... args);
+
+	template<class T>
+	UniqueReference<B, T> storeUniqueRef(std::unique_ptr<T> object);
 
 	template<class T, class... Args>
 	UniqueReference<B, T> makeUniqueRef(Args&&... args);
@@ -260,6 +271,13 @@ inline ReferenceManager<B>* UniqueReference<B, T>::getManager() const {
 }
 
 template<class B, class T>
+inline QualifiedReference<B, T> UniqueReference<B, T>::getQualified() const {
+	QualifiedReference<B, T> result{};
+	result.set(this->getManager(), this->getWeak());
+	return result;
+}
+
+template<class B, class T>
 inline T* WeakReference<B, T>::get() const {
 	return static_cast<T*>(this->ptr);
 }
@@ -272,7 +290,7 @@ inline T* WeakReference<B, T>::operator->() const {
 template<class B, class T>
 inline Handle WeakReference<B, T>::getHandle() const {
 	assert(this->isNotNull());
-	return this->get()->selfHandle;
+	return this->get()->uniqueIdentifier;
 }
 
 inline Reference::operator bool() const {
@@ -401,16 +419,15 @@ inline T* ReferenceManager<B>::getPtr(Handle h) {
 }
 
 template<class B>
-template<class T, class... Args>
-inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&&... args) {
+template<class T>
+inline WeakReference<B, T> ReferenceManager<B>::storeRef(std::unique_ptr<T> object) {
 	Handle h = this->getFreeHandle();
 
-	auto object = std::make_unique<T>(std::forward<Args>(args)...);
 	auto ptr = object.get();
 
 	this->data[h] = std::move(object);
 
-	ptr->selfHandle = h;
+	ptr->uniqueIdentifier = h;
 
 	if constexpr (has_unique_identifier_member<B>) {
 		ptr->uniqueIdentifier = decltype(ptr->uniqueIdentifier)(this->uniqueIdentifierCounter++);
@@ -418,6 +435,20 @@ inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&&... args) {
 	}
 
 	return WeakReference<B, T>(ptr);
+}
+
+template<class B>
+template<class T, class... Args>
+inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&&... args) {
+	auto object = std::make_unique<T>(std::forward<Args>(args)...);
+
+	return this->storeRef(std::move(object));
+}
+
+template<class B>
+template<class T>
+inline UniqueReference<B, T> ReferenceManager<B>::storeUniqueRef(std::unique_ptr<T> obj) {
+	return UniqueReference<B, T>(*this, this->storeRef<T>(std::move(obj)));
 }
 
 template<class B>
@@ -596,7 +627,7 @@ inline void ReferenceManager<B>::completeReferences() {
 template<class B, class T>
 inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, WeakReference<B, T> ref)
     : WeakReference<B, T>(ref) {
-	this->manager = manager_;
+	this->manager = &manager_;
 }
 
 template<class B, class T>
@@ -759,7 +790,7 @@ inline void QualifiedReference<B, T>::set(ReferenceManager<B>& manager_, WeakRef
 	assert(this->manager == nullptr || this->manager == &manager_);
 
 	this->manager = &manager_;
-	this->handle = r->selfHandle;
+	this->handle = r->uniqueIdentifier;
 	this->ptr = r.get();
 	this->qualifier = uint64_t(r->uniqueIdentifier);
 }
