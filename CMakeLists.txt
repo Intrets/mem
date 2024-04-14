@@ -18,7 +18,7 @@ make_module(
 		LazyGlobal
 		Everything
 		MutexedObject
-	CXX_STANDARD 20
+	CXX_STANDARD 23
 	REQUIRED_LIBS
 		tepp
 	OPTIONAL_LIBS
