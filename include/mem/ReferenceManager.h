@@ -219,6 +219,8 @@ public:
 
 	std::vector<Handle> freed{};
 
+	bool validHandle(Handle h) const;
+
 	template<class T>
 	T* getPtr(Handle h);
 
@@ -397,7 +399,12 @@ inline ManagedReference<B, T>::~ManagedReference() {
 template<class B>
 template<class T>
 inline T* ReferenceManager<B>::getPtr(Handle h) {
-	return static_cast<T*>(data[h].get());
+	if (this->validHandle(h)) {
+		return static_cast<T*>(this->data[h].get());
+	}
+	else {
+		return nullptr;
+	}
 }
 
 template<class B>
@@ -591,6 +598,16 @@ inline void ReferenceManager<B>::completeReferences() {
 		*ptr = this->data[h].get();
 	}
 	this->incompletePointers.clear();
+}
+
+template<class B>
+inline bool ReferenceManager<B>::validHandle(Handle h) const {
+	if (h >= 0 && h < this->data.size()) {
+		return this->identifiers[h] != 0;
+	}
+	else {
+		return false;
+	}
 }
 
 template<class B, class T>
