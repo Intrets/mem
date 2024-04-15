@@ -217,7 +217,7 @@ public:
 
 	bool validHandle(Handle h) const;
 
-	template<class T>
+	template<class T = B>
 	T* getPtr(Handle h);
 
 	template<class T>
