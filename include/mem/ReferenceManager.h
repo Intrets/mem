@@ -118,6 +118,7 @@ public:
 
 	void set(ReferenceManager<B>& manager, WeakReference<B, T> r);
 	void set(UniqueReference<B, T>& r);
+	void unset();
 
 	QualifiedReference() = default;
 
@@ -854,4 +855,9 @@ inline void QualifiedReference<B, T>::set(ReferenceManager<B>& manager_, WeakRef
 template<class B, class T>
 inline void QualifiedReference<B, T>::set(UniqueReference<B, T>& r) {
 	this->set(*r.getManager(), r.getWeak());
+}
+
+template<class B, class T>
+inline void QualifiedReference<B, T>::unset() {
+	this->qualifier = {};
 }
