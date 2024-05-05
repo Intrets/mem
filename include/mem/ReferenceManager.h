@@ -57,6 +57,9 @@ public:
 
 using Handle = uint64_t;
 
+template<class, class>
+class QualifiedReference;
+
 template<class B, class T>
 class WeakReference : public Reference
 {
@@ -74,6 +77,8 @@ public:
 
 	template<class N>
 	operator WeakReference<B, N>() const;
+
+	QualifiedReference<B, T> getQualified(ReferenceManager<B>& manager);
 
 	void deleteObject(ReferenceManager<B>& manager);
 	void clear();
@@ -289,6 +294,13 @@ inline Handle WeakReference<B, T>::getHandle() const {
 
 inline Reference::operator bool() const {
 	return this->isNotNull();
+}
+
+template<class B, class T>
+inline QualifiedReference<B, T> WeakReference<B, T>::getQualified(ReferenceManager<B>& manager) {
+	QualifiedReference<B, T> result{};
+	result.set(manager, *this);
+	return result;
 }
 
 template<class B, class T>
