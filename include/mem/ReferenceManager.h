@@ -78,7 +78,7 @@ public:
 	template<class N>
 	operator WeakReference<B, N>() const;
 
-	QualifiedReference<B, T> getQualified(ReferenceManager<B>& manager);
+	QualifiedReference<B, T> getQualified(ReferenceManager<B>& manager) const;
 
 	void deleteObject(ReferenceManager<B>& manager);
 	void clear();
@@ -297,7 +297,7 @@ inline Reference::operator bool() const {
 }
 
 template<class B, class T>
-inline QualifiedReference<B, T> WeakReference<B, T>::getQualified(ReferenceManager<B>& manager) {
+inline QualifiedReference<B, T> WeakReference<B, T>::getQualified(ReferenceManager<B>& manager) const {
 	QualifiedReference<B, T> result{};
 	result.set(manager, *this);
 	return result;
