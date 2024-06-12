@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <concepts>
+#include <memory>
 
 #ifdef LIB_SERIAL
 #include <serial/Serializer.h>
@@ -79,11 +80,8 @@ struct Index
 template<class T, class S, class index_type = default_index_type>
 struct IndexConverter;
 
-template<class>
-struct hash;
-
 template<class T>
-struct hash<Index<T>>
+struct std::hash<Index<T>>
 {
 	std::size_t operator()(Index<T> const& index) const noexcept {
 		return hash<typename Index<T>::index_type>()(index.i);
