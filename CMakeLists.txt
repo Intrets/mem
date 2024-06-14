@@ -1,7 +1,7 @@
 # mem - A C++ library for managing objects
 # Copyright (C) 2021 intrets
 
-cmake_minimum_required(VERSION 2.18)
+cmake_minimum_required(VERSION 3.18)
 
 include("${CMAKE_SOURCE_DIR}/cmake/MakeModule.cmake")
 
