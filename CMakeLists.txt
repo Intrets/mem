@@ -22,5 +22,4 @@ make_module(
 	REQUIRED_LIBS
 		tepp
 	OPTIONAL_LIBS
-		serial
 )
