@@ -14,6 +14,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <tepp/integers.h>
+
 #ifdef RTTI_CHECKS
 #include <typeinfo>
 #endif
@@ -56,7 +58,7 @@ public:
 	virtual ~Reference() = default;
 };
 
-using Handle = uint64_t;
+using Handle = integer_t;
 
 template<class, class>
 class QualifiedReference;
@@ -96,8 +98,8 @@ namespace detailmem::has_unique_identifier_member
 {
 	template<class T>
 	concept helper =
-	    std::constructible_from<uint64_t, std::remove_cvref_t<T>> &&
-	    std::constructible_from<std::remove_cvref_t<T>, uint64_t>;
+	    std::constructible_from<qualifier_t, std::remove_cvref_t<T>> &&
+	    std::constructible_from<std::remove_cvref_t<T>, qualifier_t>;
 }
 
 template<class T>
@@ -114,7 +116,7 @@ class QualifiedReference : private WeakReference<B, T>
 {
 public:
 	ReferenceManager<B>* manager{};
-	uint64_t qualifier{};
+	qualifier_t qualifier{};
 	Handle handle{};
 
 	WeakReference<B, T> getRef() const;
@@ -216,9 +218,9 @@ public:
 
 	ManagedReferencesType managedReferences;
 
-	std::vector<uint64_t> identifiers{};
+	std::vector<qualifier_t> identifiers{};
 	std::vector<std::unique_ptr<B>> data{};
-	uint64_t uniqueIdentifierCounter = 1;
+	qualifier_t uniqueIdentifierCounter = 1;
 
 	std::vector<Handle> freed{};
 
@@ -255,7 +257,7 @@ public:
 	template<class T>
 	void deleteReference(ManagedReference<B, T>& ref);
 
-	bool isQualified(Handle handle, uint64_t qualifier);
+	bool isQualified(Handle handle, qualifier_t qualifier);
 
 	void clear();
 
@@ -443,7 +445,7 @@ inline WeakReference<B, T> ReferenceManager<B>::storeRef(std::unique_ptr<T> obje
 
 	if constexpr (has_unique_identifier_member<B>) {
 		ptr->uniqueIdentifier = decltype(ptr->uniqueIdentifier)(this->uniqueIdentifierCounter++);
-		this->identifiers[h] = uint64_t(ptr->uniqueIdentifier);
+		this->identifiers[h] = qualifier_t(ptr->uniqueIdentifier);
 	}
 
 	return WeakReference<B, T>(ptr);
@@ -555,9 +557,9 @@ inline void ReferenceManager<B>::deleteReference(Handle h) {
 }
 
 template<class B>
-inline bool ReferenceManager<B>::isQualified(Handle handle, uint64_t qualifier) {
-	assert(handle < this->identifiers.size());
-	return handle < this->identifiers.size() && this->identifiers[handle] == qualifier;
+inline bool ReferenceManager<B>::isQualified(Handle handle, qualifier_t qualifier) {
+	assert(handle < isize(this->identifiers));
+	return handle < isize(this->identifiers) && this->identifiers[handle] == qualifier;
 }
 
 template<class B>
@@ -605,7 +607,7 @@ inline Handle ReferenceManager<B>::getFreeHandle() {
 		return handle;
 	}
 	else {
-		auto handle = static_cast<int32_t>(this->data.size());
+		auto handle = isize(this->data);
 		this->data.emplace_back(nullptr);
 		this->identifiers.push_back({});
 
@@ -638,7 +640,7 @@ inline void ReferenceManager<B>::completeReferences() {
 
 template<class B>
 inline bool ReferenceManager<B>::validHandle(Handle h) const {
-	if (h >= 0 && h < this->data.size()) {
+	if (h >= 0 && h < isize(this->data)) {
 		return this->identifiers[h] != 0;
 	}
 	else {
@@ -787,50 +789,6 @@ inline void Reference::clearPtr() {
 	this->ptr = nullptr;
 }
 
-// template<class B, class T>
-// inline ReferenceManager<B>* QualifiedReference<B, T>::getManager() const {
-//	return this->manager;
-// }
-
-// template<class B, class T>
-// inline WeakReference<B, T> QualifiedReference<B, T>::getRef() const {
-//	return *this;
-// }
-
-// template<class B, class T>
-// inline WeakReference<B, T> QualifiedReference<B, T>::getIfValid() const {
-//	if (this->isValid()) {
-//		return this->getRef();
-//	}
-//	else {
-//		return WeakReference<B, T>();
-//	}
-// }
-
-// template<class B, class T>
-// inline void QualifiedReference<B, T>::set(ReferenceManager<B>& manager_, WeakReference<B, T> r) {
-//	assert(this->manager == nullptr || this->manager == &manager_);
-//
-//	this->manager = &manager_;
-//	this->handle = r->uniqueIdentifier;
-//	this->ptr = r.get();
-//	this->qualifier = uint64_t(r->uniqueIdentifier);
-// }
-
-// template<class B, class T>
-// inline void QualifiedReference<B, T>::set(UniqueReference<B, T>& r) {
-//	this->set(*r.getManager(), r.getWeak());
-// }
-
-// template<class B, class T>
-// inline bool QualifiedReference<B, T>::isValid() const {
-//	if (this->manager == nullptr) {
-//		return false;
-//	}
-//
-//	return this->manager->isQualified(this->handle, this->qualifier);
-// }
-
 template<class B, class T>
 inline WeakReference<B, T> QualifiedReference<B, T>::getRef() const {
 	return *this;
@@ -862,7 +820,7 @@ inline void QualifiedReference<B, T>::set(ReferenceManager<B>& manager_, WeakRef
 	this->manager = &manager_;
 	this->handle = r.getHandle();
 	this->ptr = r.get();
-	this->qualifier = uint64_t(r->uniqueIdentifier);
+	this->qualifier = qualifier_t(r->uniqueIdentifier);
 }
 
 template<class B, class T>
