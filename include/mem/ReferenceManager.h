@@ -122,6 +122,9 @@ public:
 	WeakReference<B, T> getRef() const;
 	WeakReference<B, T> getIfValid() const;
 
+	template<class N>
+	operator QualifiedReference<B, N>() const;
+
 	bool isValid() const;
 
 	void set(ReferenceManager<B>& manager, WeakReference<B, T> r);
@@ -831,4 +834,12 @@ inline void QualifiedReference<B, T>::set(UniqueReference<B, T>& r) {
 template<class B, class T>
 inline void QualifiedReference<B, T>::unset() {
 	this->qualifier = {};
+}
+
+template<class B, class T>
+template<class N>
+inline QualifiedReference<B, T>::operator QualifiedReference<B, N>() const {
+	QualifiedReference<B, N> result{};
+	result.set(*this->manager, this->operator WeakReference<B, N>());
+	return result;
 }
