@@ -4,7 +4,6 @@
 #pragma once
 
 #include <algorithm>
-#include <cassert>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -15,6 +14,7 @@
 #include <vector>
 
 #include <tepp/integers.h>
+#include <tepp/assert.h>
 
 #ifdef RTTI_CHECKS
 #include <typeinfo>
@@ -294,7 +294,7 @@ inline T* WeakReference<B, T>::operator->() const {
 
 template<class B, class T>
 inline Handle WeakReference<B, T>::getHandle() const {
-	assert(this->isNotNull());
+	tassert(this->isNotNull());
 	return this->get()->selfHandle;
 }
 
@@ -331,7 +331,7 @@ template<class B, class T>
 inline WeakReference<B, T>::WeakReference(ReferenceManager<B>& manager_, Handle h) {
 	this->ptr = manager_.data[h].get();
 #ifdef RTTI_CHECKS
-	assert(dynamic_cast<T*>(this->get()));
+	tassert(dynamic_cast<T*>(this->get()));
 #endif
 }
 
@@ -387,7 +387,7 @@ inline WeakReference<B, T> ManagedReference<B, T>::getIfValid() const {
 
 template<class B, class T>
 inline void ManagedReference<B, T>::set(ReferenceManager<B>& manager_, WeakReference<B, T> r) {
-	assert(this->manager == nullptr || this->manager == &manager_);
+	tassert(this->manager == nullptr || this->manager == &manager_);
 
 	if (this->isValid()) {
 		this->getManager()->unsubscribe(*this);
@@ -484,7 +484,7 @@ inline void ReferenceManager<B>::subscribe(ManagedReference<B, T>& toManage) {
 	auto end = range.second;
 
 	for (; it != end; it++) {
-		assert(it->second != static_cast<Reference*>(&toManage));
+		tassert(it->second != static_cast<Reference*>(&toManage));
 	}
 #endif
 
@@ -508,7 +508,7 @@ inline void ReferenceManager<B>::unsubscribe(ManagedReference<B, T>& managedRefe
 			}
 		}
 
-		assert(count == 1);
+		tassert(count == 1);
 	}
 #endif
 
@@ -561,8 +561,9 @@ inline void ReferenceManager<B>::deleteReference(Handle h) {
 
 template<class B>
 inline bool ReferenceManager<B>::isQualified(Handle handle, qualifier_t qualifier) {
-	assert(handle < isize(this->identifiers));
-	return handle < isize(this->identifiers) && this->identifiers[handle] == qualifier;
+	tassert(handle > 0);
+	tassert(handle < isize(this->identifiers));
+	return handle > 0 && handle < isize(this->identifiers) && this->identifiers[handle] == qualifier;
 }
 
 template<class B>
@@ -692,8 +693,8 @@ inline UniqueReference<B, S> UniqueReference<B, T>::convert() {
 template<class B, class T>
 template<class N>
 inline UniqueReference<B, T>::UniqueReference(UniqueReference<B, N>&& other) {
-	assert(other.isNotNull());
-	assert(this->manager == nullptr || this->manager == other.manager);
+	tassert(other.isNotNull());
+	tassert(this->manager == nullptr || this->manager == other.manager);
 
 	this->ptr = other.ptr;
 	this->manager = other.manager;
@@ -710,8 +711,8 @@ inline UniqueReference<B, T>& UniqueReference<B, T>::operator=(UniqueReference<B
 			return *this;
 		}
 	}
-	assert(this->ptr != other.ptr);
-	assert(this->manager == nullptr || this->manager == other.manager);
+	tassert(this->ptr != other.ptr);
+	tassert(this->manager == nullptr || this->manager == other.manager);
 
 	if (this->manager) {
 		this->deleteObject(*this->manager);
@@ -747,7 +748,7 @@ template<class B, class T>
 template<class R>
 inline R* WeakReference<B, T>::getAs() const {
 #ifdef RTTI_CHECKS
-	assert(dynamic_cast<R*>(this->get()));
+	tassert(dynamic_cast<R*>(this->get()));
 #endif
 	return static_cast<R*>(this->ptr);
 }
@@ -756,7 +757,7 @@ template<class B, class T>
 template<class N>
 inline WeakReference<B, N> WeakReference<B, T>::as() const {
 #ifdef RTTI_CHECKS
-	assert(dynamic_cast<N*>(this->get()));
+	tassert(dynamic_cast<N*>(this->get()));
 #endif
 	return WeakReference<B, N>(this->get());
 }
@@ -818,7 +819,7 @@ inline bool QualifiedReference<B, T>::isValid() const {
 
 template<class B, class T>
 inline void QualifiedReference<B, T>::set(ReferenceManager<B>& manager_, WeakReference<B, T> r) {
-	assert(this->manager == nullptr || this->manager == &manager_);
+	tassert(this->manager == nullptr || this->manager == &manager_);
 
 	this->manager = &manager_;
 	this->handle = r.getHandle();
