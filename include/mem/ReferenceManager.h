@@ -13,8 +13,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include <tepp/integers.h>
 #include <tepp/assert.h>
+#include <tepp/integers.h>
 
 #ifdef RTTI_CHECKS
 #include <typeinfo>
@@ -223,7 +223,7 @@ public:
 
 	std::vector<qualifier_t> identifiers{};
 	std::vector<std::unique_ptr<B>> data{};
-	qualifier_t uniqueIdentifierCounter = 1;
+	qualifier_t uniqueIdentifierCounter = 3;
 
 	std::vector<Handle> freed{};
 
@@ -598,7 +598,7 @@ inline ReferenceManager<B>::~ReferenceManager() {
 template<class B>
 inline void ReferenceManager<B>::freeData(Handle h) {
 	this->data[h].reset();
-	this->identifiers[h] = {};
+	this->identifiers[h] = qualifier_t(2);
 	this->freed.push_back(h);
 }
 
@@ -834,7 +834,7 @@ inline void QualifiedReference<B, T>::set(UniqueReference<B, T>& r) {
 
 template<class B, class T>
 inline void QualifiedReference<B, T>::unset() {
-	this->qualifier = {};
+	this->qualifier = qualifier_t(1);
 }
 
 template<class B, class T>
