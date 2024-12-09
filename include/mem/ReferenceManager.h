@@ -63,7 +63,7 @@ using Handle = integer_t;
 template<class, class>
 class QualifiedReference;
 
-template<class B, class T>
+template<class B, class T = B>
 class WeakReference : public Reference
 {
 public:
@@ -111,7 +111,7 @@ concept has_unique_identifier_member =
 template<class, class>
 class UniqueReference;
 
-template<class B, class T>
+template<class B, class T = B>
 class QualifiedReference : private WeakReference<B, T>
 {
 public:
