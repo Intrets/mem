@@ -89,6 +89,7 @@ public:
 	WeakReference() = default;
 
 	WeakReference(B* p);
+	WeakReference(B& o);
 	WeakReference(ReferenceManager<B>& manager, Handle h);
 
 	virtual ~WeakReference() = default;
@@ -325,6 +326,11 @@ inline void WeakReference<B, T>::clear() {
 template<class B, class T>
 inline WeakReference<B, T>::WeakReference(B* p) {
 	this->ptr = p;
+}
+
+template<class B, class T>
+inline WeakReference<B, T>::WeakReference(B& o) {
+	this->ptr = &o;
 }
 
 template<class B, class T>
