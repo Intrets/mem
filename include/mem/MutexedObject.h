@@ -5,10 +5,18 @@
 
 #include <mutex>
 
-#define DEFAULT_COPY(T) T(const T&) = default; T& operator=(const T&) = default;
-#define NO_COPY(T) T(const T&) = delete; T& operator=(const T&) = delete;
-#define DEFAULT_MOVE(T) T(T&&) = default; T& operator=(T&&) = default;
-#define NO_MOVE(T) T(T&&) = delete; T& operator=(T&&) = delete;
+#define DEFAULT_COPY(T) \
+	T(const T&) = default; \
+	T& operator=(const T&) = default;
+#define NO_COPY(T) \
+	T(const T&) = delete; \
+	T& operator=(const T&) = delete;
+#define DEFAULT_MOVE(T) \
+	T(T&&) = default; \
+	T& operator=(T&&) = default;
+#define NO_MOVE(T) \
+	T(T&&) = delete; \
+	T& operator=(T&&) = delete;
 #define DEFAULT_COPY_MOVE(T) DEFAULT_COPY(T) DEFAULT_MOVE(T)
 #define NO_COPY_MOVE(T) NO_COPY(T) NO_MOVE(T)
 
@@ -21,9 +29,10 @@ namespace mem
 	struct MutexedObject
 	{
 		using mutex_type = mutex_type_;
+		using access_type = ScopedAccess<MutexedObject<T, mutex_type>>;
 
 	private:
-		friend struct ScopedAccess<MutexedObject<T, mutex_type>>;
+		friend struct access_type;
 
 		using ValueType = T;
 
@@ -36,7 +45,7 @@ namespace mem
 		}
 
 		auto acquire() {
-			return ScopedAccess<MutexedObject<T, mutex_type>>(*this);
+			return access_type(*this);
 		}
 
 		void set(T&& object_) {
@@ -58,8 +67,8 @@ namespace mem
 		}
 
 		template<class... Args>
-		MutexedObject(Args&&... args) : object(std::forward<Args>(args)...) {
-		};
+		MutexedObject(Args&&... args)
+		    : object(std::forward<Args>(args)...){};
 		~MutexedObject() = default;
 
 		NO_COPY(MutexedObject);
@@ -80,7 +89,9 @@ namespace mem
 			return this->object.object;
 		}
 
-		ScopedAccess(T& object_) : object(object_), lock(object.mutex) {
+		ScopedAccess(T& object_)
+		    : object(object_),
+		      lock(object.mutex) {
 		}
 
 		~ScopedAccess() = default;
