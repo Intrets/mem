@@ -847,6 +847,6 @@ template<class B, class T>
 template<class N>
 inline QualifiedReference<B, T>::operator QualifiedReference<B, N>() const {
 	QualifiedReference<B, N> result{};
-	result.set(*this->manager, this->operator WeakReference<B, N>());
+	result.set(*this->manager, this->getRef());
 	return result;
 }

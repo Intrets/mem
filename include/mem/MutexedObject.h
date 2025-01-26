@@ -32,7 +32,7 @@ namespace mem
 		using access_type = ScopedAccess<MutexedObject<T, mutex_type>>;
 
 	private:
-		friend struct access_type;
+		friend access_type;
 
 		using ValueType = T;
 
