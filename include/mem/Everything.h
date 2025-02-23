@@ -254,7 +254,7 @@ namespace mem
 		struct component_index
 		{
 			static inline Index<Component> getVal() {
-				assert(LazyGlobal<ComponentCounter>->size() < SIZE);
+				tassert(LazyGlobal<ComponentCounter>->size() < SIZE);
 
 				StructInformation info;
 #ifdef LIB_SERIAL
@@ -531,10 +531,10 @@ namespace mem
 
 	template<class T>
 	inline void RawData::remove(Index<RawData> i) {
-		assert(i != 0);
-		assert(i < this->index);
-		assert(this->objectSize != 0);
-		assert(this->objectSize == aligned_sizeof<T>::get());
+		tassert(i != 0);
+		tassert(i < this->index);
+		tassert(this->objectSize != 0);
+		tassert(this->objectSize == aligned_sizeof<T>::get());
 		this->removeUntyped(i);
 	}
 
@@ -568,15 +568,15 @@ namespace mem
 	}
 
 	inline RawData::~RawData() {
-		assert(this->deletions.empty());
+		tassert(this->deletions.empty());
 		for (Index<RawData> i{ 1 }; i < this->index; i++) {
 			this->structInformation.objectDestructor(this->getUntyped(i));
 		}
 	}
 
 	inline void RawData::removeUntyped(Index<RawData> i) {
-		assert(i != 0);
-		assert(i < this->index);
+		tassert(i != 0);
+		tassert(i < this->index);
 
 		size_t targetOffset = i * this->objectSize;
 
@@ -587,20 +587,20 @@ namespace mem
 
 	template<class T>
 	inline T& RawData::get(Index<RawData> i) {
-		assert(i != 0);
-		assert(i < this->reservedObjects);
+		tassert(i != 0);
+		tassert(i < this->reservedObjects);
 		return *reinterpret_cast<T*>(&this->data[aligned_sizeof<T>::get() * i]);
 	}
 
 	inline void* RawData::getUntyped(Index<RawData> i) {
-		assert(i != 0);
-		assert(i < this->reservedObjects);
+		tassert(i != 0);
+		tassert(i < this->reservedObjects);
 		return static_cast<void*>(&this->data[this->objectSize * i]);
 	}
 
 	inline Index<Everything> RawData::getIndex(Index<RawData> i) const {
-		assert(i != 0);
-		assert(i < this->index);
+		tassert(i != 0);
+		tassert(i < this->index);
 		return this->indices[i];
 	}
 
@@ -611,11 +611,11 @@ namespace mem
 #endif
 
 	inline Index<RawData> RawData::cloneUntyped(Index<RawData> i, Index<Everything> j) {
-		assert(0);
-		assert(this->index > 1);
-		assert(i > 0 && i <= this->index);
-		assert(this->structInformation.clone != nullptr);
-		assert(this->structInformation.width != 0);
+		tassert(0);
+		tassert(this->index > 1);
+		tassert(i > 0 && i <= this->index);
+		tassert(this->structInformation.clone != nullptr);
+		tassert(this->structInformation.width != 0);
 
 		if (this->index >= this->reservedObjects) {
 			this->increaseSize();
@@ -648,8 +648,8 @@ namespace mem
 			this->increaseSize();
 		}
 
-		assert(this->objectSize == aligned_sizeof<T>::get());
-		assert(this->objectSize != 0);
+		tassert(this->objectSize == aligned_sizeof<T>::get());
+		tassert(this->objectSize != 0);
 
 		this->indices.push_back(i);
 
@@ -675,10 +675,10 @@ namespace mem
 
 		this->qualifiers[i] = this->getNextQualifier();
 
-		assert(std::ranges::find(this->removed, i) == this->removed.end());
+		tassert(std::ranges::find(this->removed, i) == this->removed.end());
 		this->removed.push_back(i);
 
-		assert(this->validIndices[i]);
+		tassert(this->validIndices[i]);
 		this->validIndices[i] = false;
 	}
 
@@ -690,8 +690,8 @@ namespace mem
 		}
 
 		for (auto i : this->removed) {
-			assert(this->signatures[i].none());
-			assert(std::ranges::find(this->freeIndirections, i) == this->freeIndirections.end());
+			tassert(this->signatures[i].none());
+			tassert(std::ranges::find(this->freeIndirections, i) == this->freeIndirections.end());
 			this->freeIndirections.push_back(i);
 		}
 
@@ -699,7 +699,7 @@ namespace mem
 	}
 
 	inline void Everything::removeComponent(Index<Everything> i, Index<Component> type) {
-		assert(this->signatures[i].test(type));
+		tassert(this->signatures[i].test(type));
 		this->data[type].removeUntyped(this->dataIndices[type][i]);
 		this->signatures[i].reset(type);
 	}
@@ -728,7 +728,7 @@ namespace mem
 	}
 
 	inline Index<RawData> Everything::getComponentIndex(Index<Everything> i, Index<Component> type) const {
-		assert(this->has(i, type));
+		tassert(this->has(i, type));
 		return this->dataIndices[type][i];
 	}
 
@@ -765,7 +765,7 @@ namespace mem
 
 	template<class T, class... Args>
 	inline T& Everything::add(Index<Everything> i, Args&&... args) {
-		assert(!this->has<T>(i));
+		tassert(!this->has<T>(i));
 		auto [index, ptr] = this->data[component_index_v<T>].template add<T>(i, std::forward<Args>(args)...);
 		this->dataIndices[component_index_v<T>][i] = index;
 		this->signatures[i].set(component_index_v<T>);
@@ -826,7 +826,7 @@ namespace mem
 
 	template<class T>
 	inline void WeakObject::remove() {
-		assert(this->isNotNull());
+		tassert(this->isNotNull());
 		this->proxy->removeComponent<T>(this->index);
 	}
 
@@ -883,7 +883,7 @@ namespace mem
 
 	template<class... Ts>
 	inline bool WeakObject::has() const {
-		assert(this->isNotNull());
+		tassert(this->isNotNull());
 		return this->proxy->has<Ts...>(this->index);
 	}
 
@@ -956,7 +956,7 @@ struct serial::Serializable<mem::WeakObject>
 			ALL(index)
 		);
 
-		assert(Global<mem::NewEverything>->ptr != nullptr);
+		tassert(Global<mem::NewEverything>->ptr != nullptr);
 		obj.proxy = Global<mem::NewEverything>->ptr;
 
 		return b;
@@ -1009,7 +1009,7 @@ struct serial::Serializable<mem::QualifiedObject>
 	}
 
 	ALL_DEF(mem::QualifiedObject) {
-		assert(0);
+		tassert(0);
 		return true;
 	}
 };
@@ -1023,7 +1023,7 @@ struct serial::Serializable<mem::StructInformation>
 		std::string name;
 		READ(name);
 		if (name != "") {
-			assert(LazyGlobal<mem::StoredStructInformations>->infos.contains(name));
+			tassert(LazyGlobal<mem::StoredStructInformations>->infos.contains(name));
 			val = LazyGlobal<mem::StoredStructInformations>->infos[name];
 		}
 		return true;

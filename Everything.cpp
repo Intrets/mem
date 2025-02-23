@@ -55,7 +55,7 @@ namespace mem
 	}
 
 	bool WeakObject::has(Index<Component> i) const {
-		assert(this->isNotNull());
+		tassert(this->isNotNull());
 		return this->proxy->has(this->index, i);
 	}
 
@@ -74,7 +74,7 @@ namespace mem
 
 			this->validIndices[i] = true;
 
-			assert(this->signatures[i].none());
+			tassert(this->signatures[i].none());
 
 			return { i, this };
 		}
@@ -89,7 +89,7 @@ namespace mem
 
 			Index<Everything> i{ this->signatures.size() - 1 };
 
-			assert(this->signatures[i].none());
+			tassert(this->signatures[i].none());
 
 			return { i, this };
 		}
@@ -110,7 +110,7 @@ namespace mem
 	}
 
 	UniqueObject Everything::clone(std::vector<Index<Component>> components, WeakObject const& obj) {
-		assert(0);
+		tassert(0);
 		auto p = this->makeUnique();
 		for (auto& type : components) {
 			if (obj.has(type)) {
@@ -134,8 +134,8 @@ namespace mem
 	}
 
 	WeakObject Everything::getFromIndex(Index<Everything> index) {
-		assert(index > 0);
-		assert(this->isValidIndex(index));
+		tassert(index > 0);
+		tassert(this->isValidIndex(index));
 		return { index, this };
 	}
 
@@ -148,17 +148,17 @@ namespace mem
 	}
 
 	bool Everything::isQualified(Index<Everything> i, Qualifier q) const {
-		assert(i != 0);
+		tassert(i != 0);
 		return this->qualifiers[i] == q;
 	}
 
 	Qualifier Everything::getQualifier(Index<Everything> i) const {
-		assert(i != 0);
+		tassert(i != 0);
 		return this->qualifiers[i];
 	}
 
 	void QualifiedObject::set(WeakObject obj) {
-		assert(obj.isNotNull());
+		tassert(obj.isNotNull());
 
 		this->object = obj;
 		this->qualifier = this->object.proxy->getQualifier(this->object.index);
@@ -169,7 +169,7 @@ namespace mem
 	}
 
 	WeakObject* QualifiedObject::operator->() {
-		assert(this->isQualified());
+		tassert(this->isQualified());
 
 		return &this->object;
 	}
