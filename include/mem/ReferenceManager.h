@@ -1,6 +1,3 @@
-// mem - A C++ library for managing objects
-// Copyright (C) 2021 intrets
-
 #pragma once
 
 #include <algorithm>
@@ -169,40 +166,6 @@ public:
 	NO_COPY(UniqueReference);
 };
 
-template<class B, class T>
-class ManagedReference : private WeakReference<B, T>
-{
-private:
-	friend class ReferenceManager<B>;
-
-public:
-	ReferenceManager<B>* manager{};
-
-	ReferenceManager<B>* getManager() const;
-
-	WeakReference<B, T> getRef() const;
-	WeakReference<B, T> getIfValid() const;
-
-	void set(ReferenceManager<B>& manager, WeakReference<B, T> r);
-
-	bool isValid() const;
-	void unset();
-
-	ManagedReference() = default;
-
-	ManagedReference(ReferenceManager<B>& manager, WeakReference<B, T> r);
-	ManagedReference(ReferenceManager<B>& manager, Handle h);
-	ManagedReference(ReferenceManager<B>& manager, B* p);
-
-	ManagedReference(ManagedReference&& other) noexcept;
-	ManagedReference<B, T>& operator=(ManagedReference&& other) noexcept;
-
-	ManagedReference(ManagedReference const&);
-	ManagedReference& operator=(ManagedReference const&);
-
-	virtual ~ManagedReference();
-};
-
 template<class B>
 class ReferenceManager
 {
@@ -217,10 +180,6 @@ public:
 	void addIncomplete(Handle h, Reference* ptr);
 	void addIncomplete(Handle h, B*& ptr);
 	void completeReferences();
-
-	typedef std::unordered_multimap<Handle, Reference*> ManagedReferencesType;
-
-	ManagedReferencesType managedReferences;
 
 	std::vector<qualifier_t> identifiers{};
 	std::vector<std::unique_ptr<B>> data{};
@@ -245,11 +204,6 @@ public:
 	template<class T, class... Args>
 	UniqueReference<B, T> makeUniqueRef(Args&&... args);
 
-	template<class T>
-	void subscribe(ManagedReference<B, T>& toManage);
-	template<class T>
-	void unsubscribe(ManagedReference<B, T>& managedReference);
-
 	void deleteReference(Handle h);
 
 	template<class T>
@@ -257,9 +211,6 @@ public:
 
 	template<class T>
 	void deleteReference(UniqueReference<B, T>& ref);
-
-	template<class T>
-	void deleteReference(ManagedReference<B, T>& ref);
 
 	bool isQualified(Handle handle, qualifier_t qualifier);
 
@@ -341,95 +292,6 @@ inline WeakReference<B, T>::WeakReference(ReferenceManager<B>& manager_, Handle 
 #endif
 }
 
-template<class B, class T>
-inline bool ManagedReference<B, T>::isValid() const {
-	return this->isNotNull();
-}
-
-template<class B, class T>
-inline void ManagedReference<B, T>::unset() {
-	if (this->isValid()) {
-		this->getManager()->unsubscribe(*this);
-	}
-	this->clear();
-}
-
-template<class B, class T>
-inline ManagedReference<B, T>::ManagedReference(ReferenceManager<B>& manager, WeakReference<B, T> r) {
-	this->set(r);
-}
-
-template<class B, class T>
-inline ManagedReference<B, T>::ManagedReference(ReferenceManager<B>& manager, Handle h) {
-	auto ref = WeakReference<B, T>(manager, h);
-	this->set(manager, ref);
-}
-
-template<class B, class T>
-inline ManagedReference<B, T>::ManagedReference(ReferenceManager<B>& manager, B* p) {
-	auto ref = WeakReference<B, T>(p);
-	this->set(manager, ref);
-}
-
-template<class B, class T>
-inline ReferenceManager<B>* ManagedReference<B, T>::getManager() const {
-	return this->manager;
-}
-
-template<class B, class T>
-inline WeakReference<B, T> ManagedReference<B, T>::getRef() const {
-	return *this;
-}
-
-template<class B, class T>
-inline WeakReference<B, T> ManagedReference<B, T>::getIfValid() const {
-	if (this->isValid()) {
-		return this->getRef();
-	}
-	else {
-		return WeakReference<B, T>();
-	}
-}
-
-template<class B, class T>
-inline void ManagedReference<B, T>::set(ReferenceManager<B>& manager_, WeakReference<B, T> r) {
-	tassert(this->manager == nullptr || this->manager == &manager_);
-
-	if (this->isValid()) {
-		this->getManager()->unsubscribe(*this);
-	}
-	else {
-		this->manager = &manager_;
-	}
-
-	this->ptr = r.get();
-	this->getManager()->subscribe(*this);
-}
-
-template<class B, class T>
-inline ManagedReference<B, T>::ManagedReference(ManagedReference const& other) {
-	if (auto ref = other.getRef()) {
-		this->set(ref);
-	}
-}
-
-template<class B, class T>
-inline ManagedReference<B, T>& ManagedReference<B, T>::operator=(ManagedReference const& other) {
-	if (this != &other) {
-		if (auto ref = other.getRef()) {
-			this->set(ref);
-		}
-	}
-	return *this;
-}
-
-template<class B, class T>
-inline ManagedReference<B, T>::~ManagedReference() {
-	if (this->isValid()) {
-		this->getManager()->unsubscribe(*this);
-	}
-}
-
 template<class B>
 template<class T>
 inline T* ReferenceManager<B>::getPtr(Handle h) {
@@ -482,55 +344,6 @@ inline UniqueReference<B, T> ReferenceManager<B>::makeUniqueRef(Args&&... args) 
 
 template<class B>
 template<class T>
-inline void ReferenceManager<B>::subscribe(ManagedReference<B, T>& toManage) {
-#ifdef _DEBUG
-	auto range = managedReferences.equal_range(toManage.getHandle());
-
-	auto it = range.first;
-	auto end = range.second;
-
-	for (; it != end; it++) {
-		tassert(it->second != static_cast<Reference*>(&toManage));
-	}
-#endif
-
-	this->managedReferences.insert(std::make_pair(toManage.getHandle(), static_cast<Reference*>(&toManage)));
-}
-
-template<class B>
-template<class T>
-inline void ReferenceManager<B>::unsubscribe(ManagedReference<B, T>& managedReference) {
-	auto range = this->managedReferences.equal_range(managedReference.getHandle());
-
-#ifdef _DEBUG
-	{
-		auto it = range.first;
-		auto end = range.second;
-		int32_t count = 0;
-
-		for (; it != end; it++) {
-			if (it->second == static_cast<Reference*>(&managedReference)) {
-				count++;
-			}
-		}
-
-		tassert(count == 1);
-	}
-#endif
-
-	auto it = range.first;
-	auto end = range.second;
-
-	for (; it != end; it++) {
-		if (it->second == static_cast<Reference*>(&managedReference)) {
-			it = managedReferences.erase(it);
-			break;
-		}
-	}
-}
-
-template<class B>
-template<class T>
 inline void ReferenceManager<B>::deleteReference(WeakReference<B, T>& ref) {
 	this->deleteReference(ref.getHandle());
 	ref.clear();
@@ -544,23 +357,10 @@ inline void ReferenceManager<B>::deleteReference(UniqueReference<B, T>& ref) {
 }
 
 template<class B>
-template<class T>
-inline void ReferenceManager<B>::deleteReference(ManagedReference<B, T>& ref) {
-	this->deleteReference(ref.getHandle());
-	ref.clear();
-}
-
-template<class B>
 inline void ReferenceManager<B>::deleteReference(Handle h) {
 	if (h == 0) {
 		return;
 	}
-	auto range = this->managedReferences.equal_range(h);
-	for_each(range.first, range.second, [](ManagedReferencesType::value_type& ref) -> void {
-		ref.second->clearPtr();
-	});
-
-	this->managedReferences.erase(range.first, range.second);
 
 	this->freeData(h);
 }
@@ -576,11 +376,6 @@ template<class B>
 inline void ReferenceManager<B>::clear() {
 	this->incomplete.resize(0);
 	this->incompletePointers.resize(0);
-
-	for (auto [_, managed] : this->managedReferences) {
-		managed->clearPtr();
-	}
-	this->managedReferences.clear();
 
 	this->data.clear();
 	this->data.emplace_back(nullptr);
@@ -728,25 +523,6 @@ inline UniqueReference<B, T>& UniqueReference<B, T>::operator=(UniqueReference<B
 	this->manager = other.manager;
 	other.ptr = nullptr;
 	other.manager = nullptr;
-	return *this;
-}
-
-template<class B, class T>
-inline ManagedReference<B, T>::ManagedReference(ManagedReference&& other) noexcept {
-	if (auto ref = other.getRef()) {
-		this->set(ref);
-	}
-	other.unset();
-}
-
-template<class B, class T>
-inline ManagedReference<B, T>& ManagedReference<B, T>::operator=(ManagedReference&& other) noexcept {
-	if (this != &other) {
-		if (auto ref = other.getRef()) {
-			this->set(*other.manager, ref);
-		}
-		other.unset();
-	}
 	return *this;
 }
 
