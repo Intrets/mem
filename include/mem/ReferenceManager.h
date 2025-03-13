@@ -13,6 +13,10 @@
 #include <tepp/assert.h>
 #include <tepp/integers.h>
 
+#ifdef DEBUG_BUILD
+#define RTTI_CHECKS
+#endif
+
 #ifdef RTTI_CHECKS
 #include <typeinfo>
 #endif
