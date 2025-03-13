@@ -39,11 +39,56 @@
 template<class B>
 class ReferenceManager;
 
+using Handle = integer_t;
+
+namespace detail
+{
+	template<class B>
+	struct SafetyChecks
+	{
+		ReferenceManager<B>* man = nullptr;
+		qualifier_t qualifier{};
+		Handle handle{};
+
+		void clear() {
+			this->man = nullptr;
+			this->qualifier = {};
+			this->handle = 0;
+		}
+
+		void set(B* ptr) {
+			if (ptr == nullptr) {
+				this->clear();
+			}
+			else {
+				this->man = ptr->referenceManager;
+				this->qualifier = qualifier_t(ptr->uniqueIdentifier);
+				this->handle = ptr->selfHandle;
+			}
+		}
+
+		bool safety_check(B const* ptr) const {
+			if (ptr == nullptr) {
+				return true;
+			}
+
+			tassert(this->man != nullptr);
+			return this->man->isQualified(this->handle, this->qualifier) && this->man->getPtr(this->handle) == ptr;
+		}
+	};
+}
+
+template<class B>
 class Reference
 {
-public:
-	void* ptr = nullptr;
+private:
+#ifdef DEBUG_BUILD
+	detail::SafetyChecks<B> safety{};
+#endif
 
+	B* ptr = nullptr;
+
+public:
 	bool operator==(Reference const& other) const;
 	bool operator==(void* other) const;
 
@@ -53,19 +98,18 @@ public:
 	bool isNull() const;
 
 	void clearPtr();
+	B* getPtr();
+	B const* getPtr() const;
+	void setPtr(B* ptr_);
 
 	operator bool() const;
-
-	virtual ~Reference() = default;
 };
-
-using Handle = integer_t;
 
 template<class, class>
 class QualifiedReference;
 
 template<class B, class T = B>
-class WeakReference : public Reference
+class WeakReference : public Reference<B>
 {
 public:
 	T* get() const;
@@ -92,8 +136,6 @@ public:
 	WeakReference(B* p);
 	WeakReference(B& o);
 	WeakReference(ReferenceManager<B>& manager, Handle h);
-
-	virtual ~WeakReference() = default;
 };
 
 namespace detailmem::has_unique_identifier_member
@@ -136,8 +178,6 @@ public:
 	QualifiedReference() = default;
 
 	DEFAULT_COPY_MOVE(QualifiedReference);
-
-	~QualifiedReference() = default;
 };
 
 template<class B, class T>
@@ -177,11 +217,11 @@ private:
 	void freeData(Handle h);
 	Handle getFreeHandle();
 
-	std::vector<std::pair<Handle, Reference*>> incomplete;
+	std::vector<std::pair<Handle, Reference<B>*>> incomplete;
 	std::vector<std::pair<Handle, B**>> incompletePointers;
 
 public:
-	void addIncomplete(Handle h, Reference* ptr);
+	void addIncomplete(Handle h, Reference<B>* ptr);
 	void addIncomplete(Handle h, B*& ptr);
 	void completeReferences();
 
@@ -240,7 +280,7 @@ inline QualifiedReference<B, T> UniqueReference<B, T>::getQualified() const {
 
 template<class B, class T>
 inline T* WeakReference<B, T>::get() const {
-	return static_cast<T*>(this->ptr);
+	return static_cast<T*>(const_cast<B*>(this->getPtr()));
 }
 
 template<class B, class T>
@@ -254,7 +294,8 @@ inline Handle WeakReference<B, T>::getHandle() const {
 	return this->get()->selfHandle;
 }
 
-inline Reference::operator bool() const {
+template<class B>
+inline Reference<B>::operator bool() const {
 	return this->isNotNull();
 }
 
@@ -269,28 +310,28 @@ template<class B, class T>
 inline void WeakReference<B, T>::deleteObject(ReferenceManager<B>& manager) {
 	if (this->isNotNull()) {
 		manager.deleteReference(this->getHandle());
-		this->ptr = nullptr;
+		this->clearPtr();
 	}
 }
 
 template<class B, class T>
 inline void WeakReference<B, T>::clear() {
-	this->ptr = nullptr;
+	this->clearPtr();
 }
 
 template<class B, class T>
 inline WeakReference<B, T>::WeakReference(B* p) {
-	this->ptr = p;
+	this->setPtr(p);
 }
 
 template<class B, class T>
 inline WeakReference<B, T>::WeakReference(B& o) {
-	this->ptr = &o;
+	this->setPtr(&o);
 }
 
 template<class B, class T>
 inline WeakReference<B, T>::WeakReference(ReferenceManager<B>& manager_, Handle h) {
-	this->ptr = manager_.data[h].get();
+	this->setPtr(manager_.data[h].get());
 #ifdef RTTI_CHECKS
 	tassert(dynamic_cast<T*>(this->get()));
 #endif
@@ -317,6 +358,7 @@ inline WeakReference<B, T> ReferenceManager<B>::storeRef(std::unique_ptr<T> obje
 	this->data[h] = std::move(object);
 
 	ptr->selfHandle = h;
+	ptr->referenceManager = this;
 
 	if constexpr (has_unique_identifier_member<B>) {
 		ptr->uniqueIdentifier = decltype(ptr->uniqueIdentifier)(this->uniqueIdentifierCounter++);
@@ -425,7 +467,7 @@ inline Handle ReferenceManager<B>::getFreeHandle() {
 }
 
 template<class B>
-inline void ReferenceManager<B>::addIncomplete(Handle h, Reference* ptr) {
+inline void ReferenceManager<B>::addIncomplete(Handle h, Reference<B>* ptr) {
 	this->incomplete.push_back({ h, ptr });
 }
 
@@ -479,7 +521,7 @@ template<class B, class T>
 inline UniqueReference<B, T>::~UniqueReference() {
 	if (this->isNotNull()) {
 		this->getManager()->deleteReference(this->getHandle());
-		this->ptr = nullptr;
+		this->clearPtr();
 		this->manager = nullptr;
 	}
 }
@@ -501,10 +543,10 @@ inline UniqueReference<B, T>::UniqueReference(UniqueReference<B, N>&& other) {
 	tassert(other.isNotNull());
 	tassert(this->manager == nullptr || this->manager == other.manager);
 
-	this->ptr = other.ptr;
+	this->setPtr(other.getPtr());
 	this->manager = other.manager;
 
-	other.ptr = nullptr;
+	other.clearPtr();
 	other.manager = nullptr;
 }
 
@@ -516,16 +558,16 @@ inline UniqueReference<B, T>& UniqueReference<B, T>::operator=(UniqueReference<B
 			return *this;
 		}
 	}
-	tassert(this->ptr != other.ptr);
+	tassert(this->getPtr() != other.getPtr());
 	tassert(this->manager == nullptr || this->manager == other.manager);
 
 	if (this->manager) {
 		this->deleteObject(*this->manager);
 	}
 
-	this->ptr = other.ptr;
+	this->setPtr(other.getPtr());
 	this->manager = other.manager;
-	other.ptr = nullptr;
+	other.clearPtr();
 	other.manager = nullptr;
 	return *this;
 }
@@ -536,7 +578,7 @@ inline R* WeakReference<B, T>::getAs() const {
 #ifdef RTTI_CHECKS
 	tassert(dynamic_cast<R*>(this->get()));
 #endif
-	return static_cast<R*>(this->ptr);
+	return static_cast<R*>(const_cast<B*>(this->getPtr()));
 }
 
 template<class B, class T>
@@ -555,28 +597,56 @@ inline WeakReference<B, T>::operator WeakReference<B, N>() const {
 	return WeakReference<B, N>(this->get());
 }
 
-inline bool Reference::operator==(Reference const& other) const {
+template<class B>
+inline bool Reference<B>::operator==(Reference<B> const& other) const {
 	return this->ptr == other.ptr;
 }
 
-inline bool Reference::operator==(void* other) const {
+template<class B>
+inline bool Reference<B>::operator==(void* other) const {
 	return this->ptr == other;
 }
 
-inline bool Reference::operator<(Reference const& other) const {
+template<class B>
+inline bool Reference<B>::operator<(Reference<B> const& other) const {
 	return this->ptr < other.ptr;
 }
 
-inline bool Reference::isNotNull() const {
+template<class B>
+inline bool Reference<B>::isNotNull() const {
 	return this->ptr != nullptr;
 }
 
-inline bool Reference::isNull() const {
+template<class B>
+inline bool Reference<B>::isNull() const {
 	return this->ptr == nullptr;
 }
 
-inline void Reference::clearPtr() {
+template<class B>
+inline void Reference<B>::clearPtr() {
 	this->ptr = nullptr;
+
+#ifdef DEBUG_BUILD
+	this->safety.clear();
+#endif
+}
+
+template<class B>
+inline B* Reference<B>::getPtr() {
+#ifdef DEBUG_BUILD
+	tassert(this->safety.safety_check(this->ptr));
+#endif
+
+	return this->ptr;
+}
+
+template<class B>
+inline B const* Reference<B>::getPtr() const {
+#ifdef DEBUG_BUILD
+	tassert(this->safety.safety_check(this->ptr));
+#endif
+
+	return this->ptr;
 }
 
 template<class B, class T>
@@ -609,7 +679,7 @@ inline void QualifiedReference<B, T>::set(ReferenceManager<B>& manager_, WeakRef
 
 	this->manager = &manager_;
 	this->handle = r.getHandle();
-	this->ptr = r.get();
+	this->setPtr(r.get());
 	this->qualifier = qualifier_t(r->uniqueIdentifier);
 }
 
@@ -629,4 +699,13 @@ inline QualifiedReference<B, T>::operator QualifiedReference<B, N>() const {
 	QualifiedReference<B, N> result{};
 	result.set(*this->manager, this->getRef());
 	return result;
+}
+
+template<class B>
+inline void Reference<B>::setPtr(B* ptr_) {
+#ifdef DEBUG_BUILD
+	this->safety.set(ptr_);
+#endif
+
+	this->ptr = ptr_;
 }
