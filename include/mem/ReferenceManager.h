@@ -12,6 +12,7 @@
 
 #include <tepp/assert.h>
 #include <tepp/integers.h>
+#include <tepp/tepp.h>
 
 #ifdef DEBUG_BUILD
 #define RTTI_CHECKS
@@ -74,6 +75,82 @@ namespace detail
 
 			tassert(this->man != nullptr);
 			return this->man->isQualified(this->handle, this->qualifier) && this->man->getPtr(this->handle) == ptr;
+		}
+	};
+
+	template<class T>
+	struct Ptr
+	{
+		T* ptr = nullptr;
+
+		NO_COPY(Ptr);
+
+		template<class B>
+		Ptr(Ptr<B>&& other) {
+			this->ptr = other.ptr;
+			other.ptr = nullptr;
+		}
+
+		template<class B>
+		Ptr& operator=(Ptr<B>&& other) {
+			this->destroy();
+
+			this->ptr = other.ptr;
+			other.ptr = nullptr;
+
+			return *this;
+		}
+
+		T* operator->() {
+			return this->ptr;
+		}
+
+		T const* operator->() const {
+			return this->ptr;
+		}
+
+		Ptr(std::nullptr_t) {
+		}
+
+		template<class... Args>
+		Ptr(Args&&... args) {
+#if DEBUG_BUILD
+#ifdef WIN32
+			this->ptr = std::launder(reinterpret_cast<T*>(_aligned_malloc(sizeof(T), alignof(T))));
+#else
+			this->ptr = std::launder(reinterpret_cast<T*>(std::aligned_alloc(sizeof(T), alignof(T))));
+#endif
+			new (this->ptr) T(std::forward<Args>(args)...);
+#else
+			this->ptr = new T(std::forward<Args>(args...));
+#endif
+		}
+
+		void destroy() {
+			if (this->ptr == nullptr) {
+				return;
+			}
+
+#if DEBUG_BUILD
+			this->ptr->~T();
+#ifdef WIN32
+			_aligned_free(this->ptr);
+#else
+			std::free(this->ptr);
+#endif
+#else
+			delete this->ptr;
+#endif
+
+#if DEBUG_BUILD
+			std::memset(this->ptr, 0xFF, sizeof(T));
+#endif
+
+			this->ptr = nullptr;
+		}
+
+		~Ptr() {
+			this->destroy();
 		}
 	};
 }
@@ -226,7 +303,7 @@ public:
 	void completeReferences();
 
 	std::vector<qualifier_t> identifiers{};
-	std::vector<std::unique_ptr<B>> data{};
+	std::vector<detail::Ptr<B>> data{};
 	qualifier_t uniqueIdentifierCounter = 3;
 
 	std::vector<Handle> freed{};
@@ -236,14 +313,13 @@ public:
 	template<class T = B>
 	T* getPtr(Handle h);
 
+private:
 	template<class T>
-	WeakReference<B, T> storeRef(std::unique_ptr<T> object);
+	WeakReference<B, T> storeRef(detail::Ptr<T> ptr);
 
+public:
 	template<class T, class... Args>
 	WeakReference<B, T> makeRef(Args&&... args);
-
-	template<class T>
-	UniqueReference<B, T> storeUniqueRef(std::unique_ptr<T> object);
 
 	template<class T, class... Args>
 	UniqueReference<B, T> makeUniqueRef(Args&&... args);
@@ -331,7 +407,7 @@ inline WeakReference<B, T>::WeakReference(B& o) {
 
 template<class B, class T>
 inline WeakReference<B, T>::WeakReference(ReferenceManager<B>& manager_, Handle h) {
-	this->setPtr(manager_.data[h].get());
+	this->setPtr(manager_.getPtr(h));
 #ifdef RTTI_CHECKS
 	tassert(dynamic_cast<T*>(this->get()));
 #endif
@@ -341,7 +417,7 @@ template<class B>
 template<class T>
 inline T* ReferenceManager<B>::getPtr(Handle h) {
 	if (this->validHandle(h)) {
-		return static_cast<T*>(this->data[h].get());
+		return static_cast<T*>(this->data[h].ptr);
 	}
 	else {
 		return nullptr;
@@ -350,10 +426,10 @@ inline T* ReferenceManager<B>::getPtr(Handle h) {
 
 template<class B>
 template<class T>
-inline WeakReference<B, T> ReferenceManager<B>::storeRef(std::unique_ptr<T> object) {
+inline WeakReference<B, T> ReferenceManager<B>::storeRef(detail::Ptr<T> object) {
 	Handle h = this->getFreeHandle();
 
-	auto ptr = object.get();
+	auto ptr = object.ptr;
 
 	this->data[h] = std::move(object);
 
@@ -371,15 +447,9 @@ inline WeakReference<B, T> ReferenceManager<B>::storeRef(std::unique_ptr<T> obje
 template<class B>
 template<class T, class... Args>
 inline WeakReference<B, T> ReferenceManager<B>::makeRef(Args&&... args) {
-	auto object = std::make_unique<T>(std::forward<Args>(args)...);
+	auto ptr = detail::Ptr<T>(std::forward<Args>(args)...);
 
-	return this->storeRef(std::move(object));
-}
-
-template<class B>
-template<class T>
-inline UniqueReference<B, T> ReferenceManager<B>::storeUniqueRef(std::unique_ptr<T> obj) {
-	return UniqueReference<B, T>(*this, this->storeRef<T>(std::move(obj)));
+	return this->storeRef(std::move(ptr));
 }
 
 template<class B>
@@ -444,7 +514,8 @@ inline ReferenceManager<B>::~ReferenceManager() {
 
 template<class B>
 inline void ReferenceManager<B>::freeData(Handle h) {
-	this->data[h].reset();
+	this->data[h].destroy();
+
 	this->identifiers[h] = qualifier_t(2);
 	this->freed.push_back(h);
 }
