@@ -133,6 +133,7 @@ namespace detail
 
 #if DEBUG_BUILD
 			this->ptr->~T();
+			std::memset(this->ptr, 0xFF, sizeof(T));
 #ifdef WIN32
 			_aligned_free(this->ptr);
 #else
@@ -140,10 +141,6 @@ namespace detail
 #endif
 #else
 			delete this->ptr;
-#endif
-
-#if DEBUG_BUILD
-			std::memset(this->ptr, 0xFF, sizeof(T));
 #endif
 
 			this->ptr = nullptr;
