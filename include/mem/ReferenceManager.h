@@ -122,7 +122,7 @@ namespace detail
 #endif
 			new (this->ptr) T(std::forward<Args>(args)...);
 #else
-			this->ptr = new T(std::forward<Args>(args...));
+			this->ptr = new T(std::forward<Args>(args)...);
 #endif
 		}
 
