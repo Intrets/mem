@@ -133,7 +133,17 @@ namespace detail
 
 #if DEBUG_BUILD
 			this->ptr->~T();
+
+#if defined(COMPILER_CLANGCL) || defined(COMPILER_CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdynamic-class-memaccess"
+#endif
 			std::memset(this->ptr, 0xFF, sizeof(T));
+
+#if defined(COMPILER_CLANGCL) || defined(COMPILER_CLANG)
+#pragma clang diagnostic pop
+#endif
+
 #ifdef WIN32
 			_aligned_free(this->ptr);
 #else
