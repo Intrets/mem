@@ -215,10 +215,13 @@ public:
 	void deleteObject(ReferenceManager<B>& manager);
 	void clear();
 
-	WeakReference() = default;
+	DEFAULT_COPY_MOVE(WeakReference);
 
-	WeakReference(B* p);
-	WeakReference(B& o);
+	WeakReference() = default;
+	~WeakReference() = default;
+
+	WeakReference(T* p);
+	WeakReference(T& o);
 	WeakReference(ReferenceManager<B>& manager, Handle h);
 };
 
@@ -278,7 +281,7 @@ public:
 	UniqueReference<B, S> convert();
 
 	UniqueReference(ReferenceManager<B>& manager, WeakReference<B, T> ref);
-	UniqueReference(ReferenceManager<B>& manager, B* p);
+	UniqueReference(ReferenceManager<B>& manager, T* p);
 	UniqueReference(ReferenceManager<B>& manager, Handle h);
 
 	virtual ~UniqueReference();
@@ -403,12 +406,12 @@ inline void WeakReference<B, T>::clear() {
 }
 
 template<class B, class T>
-inline WeakReference<B, T>::WeakReference(B* p) {
+inline WeakReference<B, T>::WeakReference(T* p) {
 	this->setPtr(p);
 }
 
 template<class B, class T>
-inline WeakReference<B, T>::WeakReference(B& o) {
+inline WeakReference<B, T>::WeakReference(T& o) {
 	this->setPtr(&o);
 }
 
@@ -584,7 +587,7 @@ inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, Wea
 }
 
 template<class B, class T>
-inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, B* p)
+inline UniqueReference<B, T>::UniqueReference(ReferenceManager<B>& manager_, T* p)
     : WeakReference<B, T>(p) {
 	this->manager = &manager_;
 }
@@ -665,7 +668,7 @@ inline WeakReference<B, N> WeakReference<B, T>::as() const {
 #ifdef RTTI_CHECKS
 	tassert(dynamic_cast<N*>(this->get()));
 #endif
-	return WeakReference<B, N>(this->get());
+	return WeakReference<B, N>(reinterpret_cast<N*>(this->get()));
 }
 
 template<class B, class T>
