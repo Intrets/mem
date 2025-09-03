@@ -114,16 +114,7 @@ namespace detail
 
 		template<class... Args>
 		Ptr(Args&&... args) {
-#if DEBUG_BUILD
-#ifdef WIN32
-			this->ptr = std::launder(reinterpret_cast<T*>(_aligned_malloc(sizeof(T), alignof(T))));
-#else
-			this->ptr = std::launder(reinterpret_cast<T*>(std::aligned_alloc(sizeof(T), alignof(T))));
-#endif
-			new (this->ptr) T(std::forward<Args>(args)...);
-#else
 			this->ptr = new T(std::forward<Args>(args)...);
-#endif
 		}
 
 		void destroy() {
@@ -131,27 +122,7 @@ namespace detail
 				return;
 			}
 
-#if DEBUG_BUILD
-			this->ptr->~T();
-
-#if defined(COMPILER_CLANGCL) || defined(COMPILER_CLANG)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdynamic-class-memaccess"
-#endif
-			std::memset(this->ptr, 0xFF, sizeof(T));
-
-#if defined(COMPILER_CLANGCL) || defined(COMPILER_CLANG)
-#pragma clang diagnostic pop
-#endif
-
-#ifdef WIN32
-			_aligned_free(this->ptr);
-#else
-			std::free(this->ptr);
-#endif
-#else
 			delete this->ptr;
-#endif
 
 			this->ptr = nullptr;
 		}
