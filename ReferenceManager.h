@@ -154,7 +154,9 @@ public:
 
 	void clearPtr();
 	B* getPtr();
+	B* getPtrUnchecked();
 	B const* getPtr() const;
+	B const* getPtrUnchecked() const;
 	void setPtr(B* ptr_);
 
 	operator bool() const;
@@ -168,6 +170,7 @@ class WeakReference : public Reference<B>
 {
 public:
 	T* get() const;
+	T* getUnchecked() const;
 	T* operator->() const;
 
 	Handle getHandle() const;
@@ -338,6 +341,11 @@ inline QualifiedReference<B, T> UniqueReference<B, T>::getQualified() const {
 template<class B, class T>
 inline T* WeakReference<B, T>::get() const {
 	return static_cast<T*>(const_cast<B*>(this->getPtr()));
+}
+
+template<class B, class T>
+inline T* WeakReference<B, T>::getUnchecked() const {
+	return static_cast<T*>(const_cast<B*>(this->getPtrUnchecked()));
 }
 
 template<class B, class T>
@@ -689,6 +697,11 @@ inline B* Reference<B>::getPtr() {
 	tassert(this->safety.safety_check(this->ptr));
 #endif
 
+	return this->getPtrUnchecked();
+}
+
+template<class B>
+inline B* Reference<B>::getPtrUnchecked() {
 	return this->ptr;
 }
 
@@ -698,6 +711,11 @@ inline B const* Reference<B>::getPtr() const {
 	tassert(this->safety.safety_check(this->ptr));
 #endif
 
+	return this->getPtrUnchecked();
+}
+
+template<class B>
+inline B const* Reference<B>::getPtrUnchecked() const {
 	return this->ptr;
 }
 
