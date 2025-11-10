@@ -40,6 +40,20 @@ namespace mem
 		mutex_type mutex;
 
 	public:
+		template<class F>
+		auto do_(F&& f) {
+			auto access = this->acquire();
+
+			using return_type = std::invoke_result_t<F, T&>;
+
+			if constexpr (std::same_as<return_type, void>) {
+				f(*access);
+			}
+			else {
+				return f(*access);
+			}
+		}
+
 		auto& cheat() {
 			return this->object;
 		}
