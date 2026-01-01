@@ -3,29 +3,39 @@
 
 #pragma once
 
-#include <string>
-#include <unordered_map>
-#include <bitset>
-#include <array>
-#include <optional>
 #include <algorithm>
+#include <array>
+#include <bitset>
+#include <cstring>
+#include <optional>
+#include <string>
+#include <limits>
+#include <unordered_map>
 
-#include <tepp/tepp.h>
 #include <tepp/optional_ref.h>
+#include <tepp/tepp.h>
 
 #include "Global.h"
-#include "LazyGlobal.h"
 #include "Index.h"
+#include "LazyGlobal.h"
 
 struct Component;
 
 template<class T>
 struct Identifier;
 
-#define DEFAULT_COPY(T) T(const T&) = default; T& operator=(const T&) = default;
-#define NO_COPY(T) T(const T&) = delete; T& operator=(const T&) = delete;
-#define DEFAULT_MOVE(T) T(T&&) = default; T& operator=(T&&) = default;
-#define NO_MOVE(T) T(T&&) = delete; T& operator=(T&&) = delete;
+#define DEFAULT_COPY(T) \
+	T(const T&) = default; \
+	T& operator=(const T&) = default;
+#define NO_COPY(T) \
+	T(const T&) = delete; \
+	T& operator=(const T&) = delete;
+#define DEFAULT_MOVE(T) \
+	T(T&&) = default; \
+	T& operator=(T&&) = default;
+#define NO_MOVE(T) \
+	T(T&&) = delete; \
+	T& operator=(T&&) = delete;
 #define DEFAULT_COPY_MOVE(T) DEFAULT_COPY(T) DEFAULT_MOVE(T)
 #define NO_COPY_MOVE(T) NO_COPY(T) NO_MOVE(T)
 
@@ -37,13 +47,13 @@ namespace mem
 		Index<Component> index{};
 		size_t width{};
 
-		void(*clone)(void* source, void* target) = nullptr;
-		void(*objectDestructor)(void*) = nullptr;
+		void (*clone)(void* source, void* target) = nullptr;
+		void (*objectDestructor)(void*) = nullptr;
 
 #ifdef LIB_SERIAL
-		bool(*objectReader)(serial::Serializer& serializer, void*) = nullptr;
-		bool(*objectWriter)(serial::Serializer& serializer, void*) = nullptr;
-		bool(*objectPrinter)(serial::Serializer& serializer, void*) = nullptr;
+		bool (*objectReader)(serial::Serializer& serializer, void*) = nullptr;
+		bool (*objectWriter)(serial::Serializer& serializer, void*) = nullptr;
+		bool (*objectPrinter)(serial::Serializer& serializer, void*) = nullptr;
 #endif
 	};
 
@@ -59,7 +69,6 @@ namespace mem
 		StructInformation get();
 	};
 
-
 	constexpr size_t SIZE = 64;
 	using SignatureType = std::bitset<SIZE>;
 	using Qualifier = size_t;
@@ -72,7 +81,7 @@ namespace mem
 		struct aligned_sizeof
 		{
 			static constexpr size_t get() {
-				const auto width = 8;
+				auto const width = 8;
 				constexpr size_t size = sizeof(T);
 
 				if constexpr (sizeof(T) == 0) {
@@ -224,7 +233,8 @@ namespace mem
 	{
 		Everything* ptr = nullptr;
 
-		NewEverything(Everything* p) : ptr(p) {};
+		NewEverything(Everything* p)
+		    : ptr(p) {};
 		NewEverything() = default;
 		~NewEverything() = default;
 	};
@@ -305,7 +315,7 @@ namespace mem
 		template<class M, class... Ms>
 		struct group_signature
 		{
-			static const inline SignatureType fillSignature() {
+			static inline SignatureType const fillSignature() {
 				SignatureType res{};
 				if constexpr (sizeof...(Ms) == 0) {
 					res.set(LazyGlobal<ComponentIndex<M>>->val);
@@ -318,12 +328,11 @@ namespace mem
 				return res;
 			};
 
-			static const inline SignatureType value = fillSignature();
+			static inline SignatureType const value = fillSignature();
 		};
 
 		template<class... Ms>
-		static inline const SignatureType group_signature_v = group_signature<Ms...>::value;
-
+		static inline SignatureType const group_signature_v = group_signature<Ms...>::value;
 
 		std::vector<Index<Everything>> freeIndirections{};
 
@@ -337,7 +346,6 @@ namespace mem
 		std::vector<Index<Everything>> removed{};
 
 		std::vector<RawData> data{ SIZE };
-
 
 		WeakObject make();
 		UniqueObject makeUnique();
@@ -451,12 +459,12 @@ namespace mem
 			auto pivot = e.selectPivot<M, Ms...>();
 
 			auto& g = e.gets(pivot);
-			const auto end = g.index;
+			auto const end = g.index;
 
 			if constexpr (sizeof...(Ms) == 0) {
 				for (Index<RawData> i{ 1 }; i < end; i++) {
 					auto index = g.getIndex(i);
-					Loop::run<Everything, F, L, Match<M, Ms...>, Args...>(e, f, Match<M, Ms...>{ { index, & e } }, args...);
+					Loop::run<Everything, F, L, Match<M, Ms...>, Args...>(e, f, Match<M, Ms...>{ { index, &e } }, args...);
 				}
 			}
 			else {
@@ -464,7 +472,7 @@ namespace mem
 					auto index = g.getIndex(i);
 
 					if (e.has<M, Ms...>(index)) {
-						Loop::run<Everything, F, L, Match<M, Ms...>, Args...>(e, f, Match<M, Ms...>{ { index, & e } }, args...);
+						Loop::run<Everything, F, L, Match<M, Ms...>, Args...>(e, f, Match<M, Ms...>{ { index, &e } }, args...);
 					}
 				}
 			}
@@ -482,7 +490,7 @@ namespace mem
 			auto pivot = e.selectPivot<M, Ms...>();
 
 			auto& g = e.gets(pivot);
-			const auto end = g.index;
+			auto const end = g.index;
 
 			if constexpr (sizeof...(Ms) == 0) {
 				for (Index<RawData> i{ 1 }; i < end; i++) {
@@ -510,7 +518,7 @@ namespace mem
 			auto pivot = e.selectPivot<M, Ms...>();
 
 			auto& g = e.gets(pivot);
-			const auto end = g.index;
+			auto const end = g.index;
 
 			if constexpr (sizeof...(Ms) == 0) {
 				for (Index<RawData> i{ 1 }; i < end; i++) {
@@ -541,7 +549,7 @@ namespace mem
 	inline std::vector<RawData::DeletedInfo> RawData::packDeletions() {
 		std::vector<RawData::DeletedInfo> res;
 
-		std::sort(this->deletions.begin(), this->deletions.end(), [](auto left, auto right) {return left.i > right.i; });
+		std::sort(this->deletions.begin(), this->deletions.end(), [](auto left, auto right) { return left.i > right.i; });
 
 		for (auto i : this->deletions) {
 			size_t targetOffset = i * this->objectSize;
@@ -802,9 +810,8 @@ namespace mem
 	template<class F>
 	inline void Everything::match(F f) {
 		using arguments_list = te::map_t<
-			te::type_function_t<std::remove_cvref_t>,
-			te::arguments_list_t<F>
-		>;
+		    te::type_function_t<std::remove_cvref_t>,
+		    te::arguments_list_t<F>>;
 
 		MatchExpanded<arguments_list>::run(*this, f);
 	}
@@ -860,7 +867,7 @@ namespace mem
 		}
 	}
 
-	template<class T, class ...Args>
+	template<class T, class... Args>
 	inline T& WeakObject::addOrReplace(Args&&... args) {
 		if (auto component = this->getMaybe<T>()) {
 			component.value() = T(std::forward<T>(args)...);
@@ -894,38 +901,38 @@ namespace mem
 #else
 		return infos[LazyGlobal<Everything::ComponentIndex<T>>->val];
 #endif
-}
 	}
+}
 
-using mem::WeakObject;
-using mem::UniqueObject;
-using mem::QualifiedObject;
 using mem::Everything;
+using mem::QualifiedObject;
+using mem::UniqueObject;
+using mem::WeakObject;
 
 #ifdef LIB_SERIAL
 template<>
 struct serial::Serializable<mem::Everything>
 {
-	inline static const auto typeName = "Everything";
+	inline static auto const typeName = "Everything";
 
 	ALL_DEF(mem::Everything) {
 		return serializer.runAll<Selector>(
-			ALL(data),
-			ALL(freeIndirections),
-			ALL(qualifiers),
-			ALL(qualifier),
-			ALL(signatures),
-			ALL(dataIndices),
-			ALL(removed),
-			ALL(validIndices)
-			);
+		    ALL(data),
+		    ALL(freeIndirections),
+		    ALL(qualifiers),
+		    ALL(qualifier),
+		    ALL(signatures),
+		    ALL(dataIndices),
+		    ALL(removed),
+		    ALL(validIndices)
+		);
 	}
 };
 
 template<>
 struct serial::Serializable<mem::WeakObject>
 {
-	inline static const auto typeName = "WeakObject";
+	inline static auto const typeName = "WeakObject";
 
 	PRINT_DEF(mem::WeakObject) {
 		if (obj.isNull()) {
@@ -947,13 +954,13 @@ struct serial::Serializable<mem::WeakObject>
 
 	WRITE_DEF(mem::WeakObject) {
 		return serializer.writeAll(
-			ALL(index)
+		    ALL(index)
 		);
 	}
 
 	READ_DEF(mem::WeakObject) {
 		auto b = serializer.readAll(
-			ALL(index)
+		    ALL(index)
 		);
 
 		tassert(Global<mem::NewEverything>->ptr != nullptr);
@@ -966,7 +973,7 @@ struct serial::Serializable<mem::WeakObject>
 template<>
 struct serial::Serializable<mem::UniqueObject>
 {
-	inline static const auto typeName = "UniqueObject";
+	inline static auto const typeName = "UniqueObject";
 
 	PRINT_DEF(mem::UniqueObject) {
 		mem::WeakObject objWeak = obj;
@@ -977,14 +984,14 @@ struct serial::Serializable<mem::UniqueObject>
 		mem::WeakObject weakObj = obj;
 
 		return serializer.writeAll(
-			weakObj
+		    weakObj
 		);
 	}
 
 	READ_DEF(mem::UniqueObject) {
 		mem::WeakObject weakObj;
 		auto b = serializer.readAll(
-			weakObj
+		    weakObj
 		);
 
 		obj.index = weakObj.index;
@@ -997,7 +1004,7 @@ struct serial::Serializable<mem::UniqueObject>
 template<>
 struct serial::Serializable<mem::QualifiedObject>
 {
-	inline static const auto typeName = "QualifiedObject";
+	inline static auto const typeName = "QualifiedObject";
 
 	PRINT_DEF(mem::QualifiedObject) {
 		if (!obj.isQualified()) {
@@ -1035,45 +1042,49 @@ struct serial::Serializable<mem::StructInformation>
 
 	static bool run(Print, Serializer& serializer, mem::StructInformation&& obj) {
 		return serializer.runAll<Print>(
-			ALL(name),
-			ALL(index),
-			ALL(width)
-			);
+		    ALL(name),
+		    ALL(index),
+		    ALL(width)
+		);
 	}
 };
 
 template<>
 struct serial::Serializable<mem::RawData::DeletedInfo>
 {
-	inline const static std::string_view type_name = "RawData";
+	inline static std::string_view const type_name = "RawData";
 
 	ALL_DEF(mem::RawData::DeletedInfo) {
 		return serializer.runAll<Selector>(
-			ALL(i),
-			ALL(changed)
-			);
+		    ALL(i),
+		    ALL(changed)
+		);
 	};
 };
 
 template<>
 struct serial::Serializable<mem::RawData>
 {
-	inline static const auto typeName = "RawData";
+	inline static auto const typeName = "RawData";
 
 	READ_DEF(mem::RawData) {
 		if (!serializer.readAll(
-			obj.structInformation,
-			obj.reservedObjects,
-			obj.index,
-			obj.objectSize,
-			obj.indices,
-			obj.deletions
-		)) return false;
+		        obj.structInformation,
+		        obj.reservedObjects,
+		        obj.index,
+		        obj.objectSize,
+		        obj.indices,
+		        obj.deletions
+		    )) {
+			return false;
+		}
 
 		obj.data.resize(obj.structInformation.width * obj.reservedObjects);
 
 		for (Index<mem::RawData> i{ 1 }; i < obj.index; i++) {
-			if (!obj.structInformation.objectReader(serializer, obj.getUntyped(i))) return false;
+			if (!obj.structInformation.objectReader(serializer, obj.getUntyped(i))) {
+				return false;
+			}
 		}
 
 		return true;
@@ -1081,16 +1092,20 @@ struct serial::Serializable<mem::RawData>
 
 	WRITE_DEF(mem::RawData) {
 		if (!serializer.writeAll(
-			obj.structInformation,
-			obj.reservedObjects,
-			obj.index,
-			obj.objectSize,
-			obj.indices,
-			obj.deletions
-		)) return false;
+		        obj.structInformation,
+		        obj.reservedObjects,
+		        obj.index,
+		        obj.objectSize,
+		        obj.indices,
+		        obj.deletions
+		    )) {
+			return false;
+		}
 
 		for (Index<mem::RawData> i{ 1 }; i < obj.index; i++) {
-			if (!obj.structInformation.objectWriter(serializer, obj.getUntyped(i))) return false;
+			if (!obj.structInformation.objectWriter(serializer, obj.getUntyped(i))) {
+				return false;
+			}
 		}
 
 		return true;
@@ -1098,13 +1113,13 @@ struct serial::Serializable<mem::RawData>
 
 	PRINT_DEF(mem::RawData) {
 		return serializer.runAll<Print>(
-			ALL(structInformation),
-			ALL(reservedObjects),
-			ALL(objectSize),
-			ALL(data),
-			ALL(indices),
-			ALL(deletions)
-			);
-}
+		    ALL(structInformation),
+		    ALL(reservedObjects),
+		    ALL(objectSize),
+		    ALL(data),
+		    ALL(indices),
+		    ALL(deletions)
+		);
+	}
 };
 #endif
